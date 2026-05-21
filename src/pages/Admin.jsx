@@ -61,7 +61,7 @@ export default function Admin() {
             <div className="text-xs text-[#F5F1E8]">Fernando Mendoza</div>
           </div>
           <button onClick={() => navigate('/')} className="w-full mt-2 text-xs text-[#9A9489] hover:text-[#F5F1E8] py-2 flex items-center justify-center gap-2 transition-colors">
-            <Icon name="LogOut" size={12} /> Salir
+            <Icon name="ExternalLink" size={12} /> Ver como cliente
           </button>
         </div>
       </aside>

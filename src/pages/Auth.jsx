@@ -357,12 +357,25 @@ export default function Auth() {
   const initialTab = searchParams.get('tab') || 'login';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [verificationEmail, setVerificationEmail] = useState('');
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Si ya está logueado, redirigir
+  // Si está cargando, mostrar nada o un loader pequeño para evitar parpadeos
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Si ya está logueado, redirigir dependiendo de su rol
   if (isLoggedIn) {
-    navigate('/', { replace: true });
+    if (isAdmin) {
+      navigate('/admin', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
     return null;
   }
 
