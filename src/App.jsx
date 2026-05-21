@@ -1,14 +1,35 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Booking from './pages/Booking';
 import Shop from './pages/Shop';
 import Admin from './pages/Admin';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Logo, Icon } from './components/Shared';
+
+// Componente para proteger rutas de admin
+function ProtectedAdminRoute() {
+  const { isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0A' }}>
+        <div className="text-white">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Admin />;
+}
 
 function Layout({ children }) {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const { isLoggedIn } = useAuth();
 
   if (isAdmin) return children;
 
@@ -49,14 +70,16 @@ function Layout({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/booking" element={<Booking />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/admin/*" element={<Admin />} />
-        </Routes>
-      </Layout>
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/booking" element={<Booking />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/admin/*" element={<ProtectedAdminRoute />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
