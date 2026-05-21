@@ -68,7 +68,7 @@ export const appointmentsService = {
         .from('appointments')
         .select('appointment_time')
         .eq('appointment_date', date)
-        .eq('status', 'confirmed');
+        .in('status', ['pending', 'confirmed']);
 
       if (barberId) {
         query = query.eq('barber_id', barberId);

@@ -367,8 +367,7 @@ export default function Auth() {
   }
 
   const handleRegisterSuccess = (email) => {
-    setVerificationEmail(email);
-    setActiveTab('verify');
+    navigate('/');
   };
 
   const tabs = [

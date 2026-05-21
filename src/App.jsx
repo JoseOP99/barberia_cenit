@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Booking from './pages/Booking';
 import Admin from './pages/Admin';
 import Auth from './pages/Auth';
+import Profile from './pages/Profile';
 import Shop from './pages/Shop';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Logo, Icon } from './components/Shared';
@@ -20,6 +21,19 @@ function ProtectedAdminRoute() {
   }
   if (!isAdmin) return <Navigate to="/" replace />;
   return <Admin />;
+}
+
+function ProtectedProfileRoute() {
+  const { isLoggedIn, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+        <div className="w-8 h-8 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!isLoggedIn) return <Navigate to="/auth" replace />;
+  return <Profile />;
 }
 
 function ProtectedBookingRoute() {
@@ -107,6 +121,15 @@ function UserMenu() {
               </p>
               <p className="text-xs text-[#6A655C] truncate">{profile?.email}</p>
             </div>
+
+            <Link
+              to="/perfil"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#B5AFA5] hover:text-[#E8C77E] hover:bg-white/[0.04] transition-colors"
+            >
+              <Icon name="User" size={16} />
+              Mi Perfil y Citas
+            </Link>
 
             {isAdmin && (
               <Link
@@ -295,6 +318,7 @@ export default function App() {
               <Route path="/tienda" element={<Shop />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/reset-password" element={<Auth />} />
+              <Route path="/perfil" element={<ProtectedProfileRoute />} />
               <Route path="/admin/*" element={<ProtectedAdminRoute />} />
             </Routes>
           </Layout>

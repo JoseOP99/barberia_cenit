@@ -8,6 +8,42 @@ const DAY_LABELS = {
   5: 'Viernes', 6: 'Sábado', 0: 'Domingo'
 };
 
+const TIME_OPTIONS = [];
+for (let i = 5; i <= 22; i++) {
+  const hour = i.toString().padStart(2, '0');
+  TIME_OPTIONS.push(`${hour}:00`);
+  TIME_OPTIONS.push(`${hour}:30`);
+}
+TIME_OPTIONS.push('23:00');
+TIME_OPTIONS.push('23:59');
+
+function CustomTimeSelect({ value, onChange, disabled }) {
+  return (
+    <select 
+      value={value} 
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className="bg-black/20 text-[#E8C77E] font-mono outline-none border border-white/[0.1] rounded-lg pl-3 pr-8 py-2 text-sm focus:border-[#C9A86A] disabled:opacity-30 disabled:cursor-not-allowed appearance-none cursor-pointer transition-colors hover:border-white/[0.2]"
+      style={{ 
+        backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='none' stroke='%23C9A86A' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path></svg>")`, 
+        backgroundRepeat: 'no-repeat', 
+        backgroundPosition: 'right 0.5rem center', 
+        backgroundSize: '1.2em' 
+      }}
+    >
+      {/* Opción actual por si la base de datos tiene una hora extraña como 08:45 */}
+      {!TIME_OPTIONS.includes(value) && value && (
+        <option value={value} className="bg-[#1A1816] text-[#E8C77E]">{value}</option>
+      )}
+      {TIME_OPTIONS.map(time => (
+        <option key={time} value={time} className="bg-[#1A1816] text-[#E8C77E]">
+          {time}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function ScheduleManager() {
   const [barber, setBarber] = useState(null);
   const [schedules, setSchedules] = useState([]);
@@ -111,21 +147,17 @@ export default function ScheduleManager() {
                 <tr key={s.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-3.5 text-sm text-[#F5F1E8] font-medium">{DAY_LABELS[s.day_of_week]}</td>
                   <td className="px-5 py-3.5">
-                    <input 
-                      type="time" 
+                    <CustomTimeSelect 
                       value={s.open_time.slice(0, 5)} 
-                      onChange={(e) => handleTimeChange(s.id, 'open_time', e.target.value)}
+                      onChange={(val) => handleTimeChange(s.id, 'open_time', val)}
                       disabled={!s.is_active}
-                      className="bg-transparent text-[#E8C77E] font-mono outline-none border-b border-white/[0.1] focus:border-[#C9A86A] disabled:opacity-30 disabled:cursor-not-allowed"
                     />
                   </td>
                   <td className="px-5 py-3.5">
-                    <input 
-                      type="time" 
+                    <CustomTimeSelect 
                       value={s.close_time.slice(0, 5)} 
-                      onChange={(e) => handleTimeChange(s.id, 'close_time', e.target.value)}
+                      onChange={(val) => handleTimeChange(s.id, 'close_time', val)}
                       disabled={!s.is_active}
-                      className="bg-transparent text-[#E8C77E] font-mono outline-none border-b border-white/[0.1] focus:border-[#C9A86A] disabled:opacity-30 disabled:cursor-not-allowed"
                     />
                   </td>
                   <td className="px-5 py-3.5 text-right">
