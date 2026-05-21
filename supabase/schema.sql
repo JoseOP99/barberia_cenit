@@ -253,3 +253,8 @@ insert into public.products (id, name, collection, price, stock, color_hex, acce
   ('66666666-6666-6666-6666-666666666663', 'Cap Heritage', 'Classic Line', 125000, 15, '#2C2420', '#B8965A', 'NEW', 'Algodón Puro', 'Chocolate', true, 'HER-001')
 on conflict (id) do nothing;
 
+-- Insertar perfil de administrador (usuario creado via Auth API)
+insert into public.profiles (id, full_name, email, role) values
+  ('f6bd12c7-885f-4ce9-ba3d-c3b97931e6e1', 'Admin Cénit', 'barbercenit@gmail.com', 'admin')
+on conflict (id) do nothing;
+
