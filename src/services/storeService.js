@@ -48,7 +48,7 @@ export const storeService = {
         }])
         .select(`
           *,
-          products (name, price)
+          products:product_id(name, price)
         `)
         .single();
 
@@ -66,7 +66,7 @@ export const storeService = {
         .from('reservations')
         .select(`
           *,
-          products (*)
+          products:product_id(*)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
@@ -85,13 +85,31 @@ export const storeService = {
         .from('reservations')
         .select(`
           *,
-          users:user_id(first_name, first_lastname, phone, email),
-          products (*)
+          products:product_id(*)
         `)
-        .eq('status', 'active')
+        .in('status', ['active', 'pending'])
         .order('expires_at', { ascending: true });
 
       if (error) throw error;
+
+      // Fetch user profiles manually to avoid FK relation issues
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.filter(r => r.user_id).map(r => r.user_id))];
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, first_lastname, phone, email')
+            .in('id', userIds);
+          if (profiles) {
+            data.forEach(r => {
+              if (r.user_id) {
+                r.users = profiles.find(p => p.id === r.user_id);
+              }
+            });
+          }
+        }
+      }
+
       return data || [];
     } catch (err) {
       handleError(err, 'getActiveReservations');
@@ -113,7 +131,7 @@ export const storeService = {
         .single();
         
       if (fetchErr) throw fetchErr;
-      if (reservation.status !== 'active') {
+      if (reservation.status !== 'active' && reservation.status !== 'pending') {
         throw new Error("Esta reserva ya no está activa.");
       }
 

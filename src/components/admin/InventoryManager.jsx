@@ -44,9 +44,12 @@ export default function InventoryManager() {
     setIsSubmitting(true);
     try {
       const payload = {
-        ...form,
+        name: form.name,
+        description: form.description,
         price: Number(form.price),
         stock: Number(form.stock),
+        collection: form.collection,
+        visible: form.visible
       };
       if (editingId) {
         await updateProduct(editingId, payload);

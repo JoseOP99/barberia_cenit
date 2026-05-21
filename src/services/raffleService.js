@@ -12,13 +12,30 @@ export const raffleService = {
     try {
       const { data, error } = await supabase
         .from('raffles')
-        .select(`
-          *,
-          winner:winner_user_id(first_name, first_lastname)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) handleError(error, 'getAllRaffles');
+      
+      // Fetch winners manually to avoid FK relation errors
+      if (data && data.length > 0) {
+        const winnerIds = [...new Set(data.filter(r => r.winner_user_id).map(r => r.winner_user_id))];
+        if (winnerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, first_lastname')
+            .in('id', winnerIds);
+            
+          if (profiles) {
+            data.forEach(r => {
+              if (r.winner_user_id) {
+                r.winner = profiles.find(p => p.id === r.winner_user_id);
+              }
+            });
+          }
+        }
+      }
+      
       return data || [];
     } catch (err) {
       handleError(err, 'getAllRaffles');
@@ -134,26 +151,37 @@ export const raffleService = {
         .single();
       if (err1) throw err1;
 
-      // 2. Obtener TODAS las citas completadas en el rango de fechas
-      // (Aquí buscamos agrupar por usuario en el cliente, porque PostgREST no soporta GROUP BY nativo tan fácil sin RPC)
-      const { data: appointments, error: err2 } = await supabase
-        .from('appointments')
-        .select('user_id')
-        .eq('status', 'completed')
-        .gte('appointment_date', raffle.start_date)
-        .lte('appointment_date', raffle.end_date)
-        .not('user_id', 'is', null);
-      if (err2) throw err2;
+      // 2. Determinar usuarios elegibles
+      let eligibleUsers = [];
 
-      // 3. Contar citas por usuario
-      const userCounts = {};
-      appointments.forEach(app => {
-        if (!userCounts[app.user_id]) userCounts[app.user_id] = 0;
-        userCounts[app.user_id]++;
-      });
+      if (raffle.min_appointments === 0) {
+        // Participan TODOS los usuarios registrados
+        const { data: profiles, error: errProfiles } = await supabase
+          .from('profiles')
+          .select('id');
+        if (errProfiles) throw errProfiles;
+        eligibleUsers = (profiles || []).map(p => p.id);
+      } else {
+        // 3. Obtener TODAS las citas completadas en el rango de fechas
+        const { data: appointments, error: err2 } = await supabase
+          .from('appointments')
+          .select('user_id')
+          .eq('status', 'completed')
+          .gte('appointment_date', raffle.start_date)
+          .lte('appointment_date', raffle.end_date)
+          .not('user_id', 'is', null);
+        if (err2) throw err2;
 
-      // 4. Filtrar los usuarios que cumplen el mínimo
-      const eligibleUsers = Object.keys(userCounts).filter(uid => userCounts[uid] >= raffle.min_appointments);
+        // 4. Contar citas por usuario
+        const userCounts = {};
+        appointments.forEach(app => {
+          if (!userCounts[app.user_id]) userCounts[app.user_id] = 0;
+          userCounts[app.user_id]++;
+        });
+
+        // 5. Filtrar los usuarios que cumplen el mínimo
+        eligibleUsers = Object.keys(userCounts).filter(uid => userCounts[uid] >= raffle.min_appointments);
+      }
 
       if (eligibleUsers.length === 0) return { success: true, count: 0, message: "Ningún cliente cumple los requisitos." };
 

@@ -151,7 +151,7 @@ export default function Profile() {
           <div className="grid gap-4">
             {reservations.map(res => {
               const p = res.products;
-              const isActive = res.status === 'active';
+              const isActive = res.status === 'active' || res.status === 'pending';
               return (
                 <div key={res.id} className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
                   isActive ? 'bg-[#C9A86A]/5 border-[#C9A86A]/20' : 'bg-white/[0.02] border-white/[0.04]'
@@ -159,12 +159,12 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <span className={`px-2.5 py-1 text-[10px] uppercase tracking-wider rounded-full border ${
-                        res.status === 'active' ? 'bg-[#C9A86A]/10 text-[#C9A86A] border-[#C9A86A]/20' : 
+                        (res.status === 'active' || res.status === 'pending') ? 'bg-[#C9A86A]/10 text-[#C9A86A] border-[#C9A86A]/20' : 
                         res.status === 'sold' ? 'bg-[#7FA86A]/10 text-[#7FA86A] border-[#7FA86A]/20' : 
                         res.status === 'cancelled' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
                         'bg-red-500/10 text-red-500 border-red-500/20' // expired
                       }`}>
-                        {res.status === 'sold' ? 'Comprado' : res.status === 'cancelled' ? 'Cancelada' : res.status === 'expired' ? 'Expirada' : 'Reserva Activa'}
+                        {res.status === 'sold' ? 'Comprado' : res.status === 'cancelled' ? 'Cancelada' : res.status === 'expired' ? 'Expirada' : res.status === 'pending' ? 'Pendiente' : 'Reserva Activa'}
                       </span>
                     </div>
                     <h3 className="text-sm font-medium text-[#F5F1E8]">{p?.name || 'Producto Desconocido'}</h3>

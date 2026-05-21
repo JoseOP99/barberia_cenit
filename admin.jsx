@@ -24,6 +24,7 @@ function Admin({ onExit }) {
             { id: "inventario", icon: "Package",        label: "Inventario" },
             { id: "clientes",  icon: "Users",           label: "Clientes" },
             { id: "barberos",  icon: "Scissors",        label: "Equipo" },
+            { id: "sorteos",   icon: "Gift",            label: "Sorteos" },
             { id: "ajustes",   icon: "Settings",        label: "Ajustes" }
           ].map(it => (
             <button key={it.id}

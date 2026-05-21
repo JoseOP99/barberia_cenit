@@ -25,9 +25,9 @@ export const productsService = {
       
       // Calculate real available stock subtracting active reservations
       const { data: activeReservations } = await supabase
-        .from('product_reservations')
+        .from('reservations')
         .select('product_id')
-        .eq('status', 'active');
+        .in('status', ['active', 'pending']);
       
       const reservedCounts = {};
       (activeReservations || []).forEach(r => {

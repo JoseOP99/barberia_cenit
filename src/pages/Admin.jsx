@@ -41,7 +41,7 @@ export default function Admin() {
           <Logo size={28} />
           <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mt-2">Admin</div>
         </div>
-        <nav className="flex-1 py-3">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {NAV_ITEMS.map(it => (
             <button
               key={it.id}
