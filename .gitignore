@@ -35,6 +35,9 @@ Thumbs.db
 # Misc
 *.log
 
+# Supabase
+supabase/.temp/
+
 # Claude Code local configuration (machine-specific)
 .claude/
 .agents/

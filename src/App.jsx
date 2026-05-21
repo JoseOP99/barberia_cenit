@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react
 import Home from './pages/Home';
 import Booking from './pages/Booking';
 import Admin from './pages/Admin';
+import Auth from './pages/Auth';
+import Shop from './pages/Shop';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Logo, Icon } from './components/Shared';
 import { CONTACT_INFO } from './data/cenitData';
@@ -20,8 +22,22 @@ function ProtectedAdminRoute() {
   return <Admin />;
 }
 
+function ProtectedBookingRoute() {
+  const { isLoggedIn, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+        <div className="w-8 h-8 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!isLoggedIn) return <Navigate to="/auth?tab=login&redirect=/reservar" replace />;
+  return <Booking />;
+}
+
 const NAV_LINKS = [
   { to: '/', label: 'Inicio' },
+  { to: '/tienda', label: 'Tienda' },
   { to: '/reservar', label: 'Reservar' },
 ];
 
@@ -41,12 +57,88 @@ function NavLink({ to, label, onClick }) {
   );
 }
 
+function UserMenu() {
+  const { isLoggedIn, profile, signOut, isAdmin } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (!isLoggedIn) {
+    return (
+      <Link
+        to="/auth"
+        className="inline-flex items-center gap-2 text-[13px] font-medium tracking-wide text-[#B5AFA5] hover:text-[#E8C77E] transition-colors"
+      >
+        <Icon name="LogIn" size={16} />
+        <span className="hidden sm:inline">Ingresar</span>
+      </Link>
+    );
+  }
+
+  const initials = profile
+    ? `${(profile.first_name || '')[0] || ''}${(profile.first_lastname || '')[0] || ''}`.toUpperCase()
+    : '??';
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 cursor-pointer group"
+      >
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E8C77E] to-[#8B6F3F] flex items-center justify-center">
+          <span className="text-[11px] font-semibold text-[#1A1408]">{initials}</span>
+        </div>
+        <Icon name="ChevronDown" size={14} className="text-[#6A655C] group-hover:text-[#B5AFA5] transition-colors" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 top-full mt-2 w-56 rounded-xl py-2 z-50"
+            style={{
+              background: 'rgba(20, 20, 20, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div className="px-4 py-2.5 border-b border-white/[0.06]">
+              <p className="text-sm text-[#F5F1E8] font-medium truncate">
+                {profile?.first_name} {profile?.first_lastname}
+              </p>
+              <p className="text-xs text-[#6A655C] truncate">{profile?.email}</p>
+            </div>
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#B5AFA5] hover:text-[#E8C77E] hover:bg-white/[0.04] transition-colors"
+              >
+                <Icon name="LayoutDashboard" size={16} />
+                Panel Admin
+              </Link>
+            )}
+
+            <button
+              onClick={async () => { setOpen(false); await signOut(); }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#B5AFA5] hover:text-red-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
+            >
+              <Icon name="LogOut" size={16} />
+              Cerrar Sesión
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Layout({ children }) {
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith('/admin');
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  if (isAdmin) return children;
+  if (isAdminRoute) return children;
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-white bg-[#0A0A0A]">
@@ -75,6 +167,7 @@ function Layout({ children }) {
           </nav>
 
           <div className="flex items-center gap-3">
+            <UserMenu />
             <Link
               to="/reservar"
               className="hidden sm:inline-flex items-center gap-2 bg-[#C9A86A] text-[#1A1408] text-xs font-semibold tracking-wider uppercase px-5 py-2.5 rounded-full hover:bg-[#E8C77E] transition-colors"
@@ -83,7 +176,7 @@ function Layout({ children }) {
               Reservar
             </Link>
             <button
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-[#B5AFA5] hover:text-[#E8C77E] hover:border-white/20 transition-colors"
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-[#B5AFA5] hover:text-[#E8C77E] hover:border-white/20 transition-colors cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menú"
             >
@@ -189,8 +282,11 @@ export default function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/reservar" element={<Booking />} />
+            <Route path="/reservar" element={<ProtectedBookingRoute />} />
             <Route path="/booking" element={<Navigate to="/reservar" replace />} />
+            <Route path="/tienda" element={<Shop />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/reset-password" element={<Auth />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute />} />
           </Routes>
         </Layout>

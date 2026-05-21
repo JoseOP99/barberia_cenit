@@ -82,13 +82,7 @@ export default function Home() {
 
           <button
             onClick={() => navigate('/reservar')}
-            className="w-full max-w-2xl text-left rounded-2xl p-8 sm:p-10 group transition-all hover:scale-[1.01]"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            }}
+            className="glass-panel w-full max-w-2xl text-left rounded-2xl p-8 sm:p-10 group"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
@@ -116,11 +110,7 @@ export default function Home() {
       <section className="py-16 sm:py-24 border-t border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-2xl p-8 sm:p-10" style={{
-              background: 'rgba(255,255,255,0.03)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
+            <div className="glass-panel rounded-2xl p-8 sm:p-10">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8C77E] to-[#8B6F3F] flex items-center justify-center mb-6">
                 <span className="font-display italic text-2xl text-[#1A1408]">FM</span>
               </div>
@@ -140,11 +130,7 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="rounded-2xl p-8 sm:p-10" style={{
-              background: 'rgba(255,255,255,0.03)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
+            <div className="glass-panel rounded-2xl p-8 sm:p-10">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{
                 background: 'rgba(201, 168, 106, 0.1)',
                 border: '1px solid rgba(201, 168, 106, 0.15)',

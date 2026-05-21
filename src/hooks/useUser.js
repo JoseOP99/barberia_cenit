@@ -8,6 +8,20 @@ export function useUser() {
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const fetchProfile = useCallback(async (userId) => {
+    try {
+      const userProfile = await authService.getProfile(userId);
+      setProfile(userProfile);
+      setIsAdmin(userProfile?.role === 'admin');
+      return userProfile;
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setProfile(null);
+      setIsAdmin(false);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -15,19 +29,10 @@ export function useUser() {
       try {
         setLoading(true);
         const currentUser = await authService.getCurrentUser();
-
         if (isMounted) {
           setUser(currentUser);
-
           if (currentUser) {
-            try {
-              const userProfile = await authService.getProfile(currentUser.id);
-              setProfile(userProfile);
-              setIsAdmin(userProfile?.role === 'admin');
-            } catch (err) {
-              console.error('Error fetching profile:', err);
-              setIsAdmin(false);
-            }
+            await fetchProfile(currentUser.id);
           } else {
             setProfile(null);
             setIsAdmin(false);
@@ -40,32 +45,21 @@ export function useUser() {
           setIsAdmin(false);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     initializeUser();
 
-    // Subscribe to auth changes
     const subscription = authService.onAuthStateChange(async (event, session) => {
-      if (isMounted) {
-        if (session?.user) {
-          setUser(session.user);
-          try {
-            const userProfile = await authService.getProfile(session.user.id);
-            setProfile(userProfile);
-            setIsAdmin(userProfile?.role === 'admin');
-          } catch (err) {
-            console.error('Error fetching profile on auth change:', err);
-            setIsAdmin(false);
-          }
-        } else {
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-        }
+      if (!isMounted) return;
+      if (session?.user) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setIsAdmin(false);
       }
     });
 
@@ -73,7 +67,7 @@ export function useUser() {
       isMounted = false;
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const updateProfile = useCallback(async (updates) => {
     if (!user) throw new Error('No user logged in');
@@ -82,13 +76,10 @@ export function useUser() {
       setError(null);
       const updated = await authService.updateProfile(user.id, updates);
       setProfile(updated);
-      if (updates.role) {
-        setIsAdmin(updated?.role === 'admin');
-      }
+      if (updates.role) setIsAdmin(updated?.role === 'admin');
       return updated;
     } catch (err) {
-      const errorMsg = err.message || 'Error al actualizar perfil';
-      setError(errorMsg);
+      setError(err.message || 'Error al actualizar perfil');
       throw err;
     } finally {
       setLoading(false);
@@ -104,8 +95,7 @@ export function useUser() {
       setProfile(null);
       setIsAdmin(false);
     } catch (err) {
-      const errorMsg = err.message || 'Error al cerrar sesión';
-      setError(errorMsg);
+      setError(err.message || 'Error al cerrar sesión');
       throw err;
     } finally {
       setLoading(false);
@@ -119,29 +109,53 @@ export function useUser() {
       const data = await authService.signIn(email, password);
       if (data?.user) {
         setUser(data.user);
-        const userProfile = await authService.getProfile(data.user.id);
-        setProfile(userProfile);
-        setIsAdmin(userProfile?.role === 'admin');
+        await fetchProfile(data.user.id);
       }
       return data;
     } catch (err) {
-      const errorMsg = err.message || 'Error al iniciar sesión';
-      setError(errorMsg);
+      setError(err.message || 'Error al iniciar sesión');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchProfile]);
+
+  const signUp = useCallback(async (formData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await authService.signUp(formData);
+      return data;
+    } catch (err) {
+      setError(err.message || 'Error al registrarse');
       throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const signUp = useCallback(async (email, password, fullName = '') => {
+  const resetPassword = useCallback(async (email) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await authService.signUp(email, password, fullName);
-      return data;
+      await authService.resetPassword(email);
+      return true;
     } catch (err) {
-      const errorMsg = err.message || 'Error al registrarse';
-      setError(errorMsg);
+      setError(err.message || 'Error al recuperar contraseña');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await authService.updatePassword(newPassword);
+      return true;
+    } catch (err) {
+      setError(err.message || 'Error al actualizar contraseña');
       throw err;
     } finally {
       setLoading(false);
@@ -157,11 +171,15 @@ export function useUser() {
     error,
     isLoggedIn: !!user,
     isAdmin,
+    userStatus: profile?.status || null,
+    emailVerified: profile?.email_verified || false,
     updateProfile,
     signOut,
     signIn,
     signUp,
-    clearError
+    resetPassword,
+    updatePassword,
+    clearError,
   };
 }
 

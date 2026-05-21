@@ -8,16 +8,19 @@ const AuthContext = createContext({
   error: null,
   isLoggedIn: false,
   isAdmin: false,
+  userStatus: null,
+  emailVerified: false,
   updateProfile: () => Promise.reject('Not implemented'),
   signOut: () => Promise.reject('Not implemented'),
   signIn: () => Promise.reject('Not implemented'),
   signUp: () => Promise.reject('Not implemented'),
-  clearError: () => {}
+  resetPassword: () => Promise.reject('Not implemented'),
+  updatePassword: () => Promise.reject('Not implemented'),
+  clearError: () => {},
 });
 
 export function AuthProvider({ children }) {
   const auth = useUser();
-
   return (
     <AuthContext.Provider value={auth}>
       {children}

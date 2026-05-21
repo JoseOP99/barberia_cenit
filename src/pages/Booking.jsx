@@ -1,22 +1,87 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '../components/Shared';
-import { CENIT_DATA, OPERATING_HOURS, CONTACT_INFO, formatCOP } from '../data/cenitData';
+import { OPERATING_HOURS, CONTACT_INFO, formatCOP } from '../data/cenitData';
+import { useAuth } from '../contexts/AuthContext';
+import servicesService from '../services/servicesService';
+import barbersService from '../services/barbersService';
+import appointmentsService from '../services/appointmentsService';
 
 const STEPS = ['Fecha y Hora', 'Tus Datos'];
 
 export default function Booking() {
-  const service = CENIT_DATA.services[0];
+  const { user, profile } = useAuth();
+  const [services, setServices] = useState([]);
+  const [barber, setBarber] = useState(null);
+  const [selectedServiceId, setSelectedServiceId] = useState(null);
+
   const [step, setStep] = useState(0);
   const [date, setDate] = useState(null);
   const [time, setTime] = useState(null);
   const [contact, setContact] = useState({ name: '', phone: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [errorSubmit, setErrorSubmit] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      setContact({ 
+        name: `${profile.first_name} ${profile.first_lastname}`.trim(), 
+        phone: profile.phone || '' 
+      });
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    async function loadData() {
+      const s = await servicesService.getAllServices();
+      const b = await barbersService.getAllBarbers(false);
+      setServices(s);
+      if (s.length > 0) setSelectedServiceId(s[0].id);
+      if (b.length > 0) setBarber(b[0]);
+    }
+    loadData();
+  }, []);
+
+  const service = services.find(s => s.id === selectedServiceId) || services[0];
 
   const canNext = [(date && time), (contact.name && contact.phone)][step];
 
-  const goNext = () => {
+  const goNext = async () => {
     if (step === 0 && canNext) setStep(1);
-    if (step === 1 && canNext) setSubmitted(true);
+    if (step === 1 && canNext) {
+      setLoadingSubmit(true);
+      setErrorSubmit('');
+      try {
+        const appointment_date = date.toISOString().split('T')[0];
+        // Asumiendo que `time` viene en formato HH:MM (ej. "14:00")
+        const appointment_time = time + ":00";
+        
+        // Calcular end_time
+        const [h, m] = time.split(':').map(Number);
+        const duration = service.duration_minutes || 45;
+        const totalMins = m + duration;
+        const endH = h + Math.floor(totalMins / 60);
+        const endM = totalMins % 60;
+        const end_time = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`;
+
+        await appointmentsService.createAppointment({
+          user_id: user?.id,
+          barber_id: barber?.id,
+          service_id: service?.id,
+          client_name: contact.name,
+          client_phone: contact.phone,
+          appointment_date,
+          appointment_time,
+          end_time,
+          status: 'pending'
+        });
+        setSubmitted(true);
+      } catch (err) {
+        setErrorSubmit(err.message || 'Error al procesar reserva');
+      } finally {
+        setLoadingSubmit(false);
+      }
+    }
   };
 
   const reset = () => {
@@ -35,7 +100,21 @@ export default function Booking() {
           <h1 className="font-display text-4xl sm:text-5xl text-[#F5F1E8] mt-2">
             Agenda tu <span className="italic text-gold-gradient">corte</span>
           </h1>
-          <p className="text-sm text-[#9A9489] mt-2">Con Fernando Mendoza · {service.name} · {formatCOP(service.price)}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-4">
+            <span className="text-sm text-[#9A9489]">Con {barber?.name || 'Fernando Mendoza'}</span>
+            <span className="hidden sm:inline text-[#3A3340]">•</span>
+            {services.length > 0 && (
+              <select 
+                value={selectedServiceId} 
+                onChange={(e) => setSelectedServiceId(e.target.value)}
+                className="bg-[#1A1A1A] border border-white/[0.08] text-sm text-[#E8C77E] rounded-lg px-3 py-1.5 outline-none focus:border-[#C9A86A] transition-colors"
+              >
+                {services.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} — {formatCOP(s.price)}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
 
         {!submitted && (
@@ -77,8 +156,8 @@ export default function Booking() {
             <SuccessView service={service} date={date} time={time} contact={contact} onReset={reset} />
           ) : (
             <>
-              {step === 0 && <DateTimeStep date={date} time={time} onDate={setDate} onTime={setTime} />}
-              {step === 1 && <ContactStep contact={contact} onChange={setContact} summary={{ service, date, time }} />}
+              {step === 0 && <DateTimeStep date={date} time={time} onDate={setDate} onTime={setTime} barberId={barber?.id} />}
+              {step === 1 && <ContactStep contact={contact} onChange={setContact} summary={{ service, date, time }} error={errorSubmit} />}
 
               <div className="mt-8 pt-6 flex items-center justify-between border-t border-white/[0.06]">
                 <button
@@ -90,11 +169,11 @@ export default function Booking() {
                 </button>
                 <button
                   onClick={goNext}
-                  disabled={!canNext}
+                  disabled={!canNext || loadingSubmit}
                   className="inline-flex items-center gap-2 bg-[#C9A86A] text-[#1A1408] text-sm font-semibold tracking-wider uppercase px-6 py-3 rounded-full hover:bg-[#E8C77E] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
-                  {step === 1 ? 'Confirmar Reserva' : 'Continuar'}
-                  <Icon name={step === 1 ? 'Check' : 'ArrowRight'} size={14} />
+                  {loadingSubmit ? 'Procesando...' : step === 1 ? 'Confirmar Reserva' : 'Continuar'}
+                  {!loadingSubmit && <Icon name={step === 1 ? 'Check' : 'ArrowRight'} size={14} />}
                 </button>
               </div>
             </>
@@ -105,10 +184,12 @@ export default function Booking() {
   );
 }
 
-function DateTimeStep({ date, time, onDate, onTime }) {
+function DateTimeStep({ date, time, onDate, onTime, barberId }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -128,6 +209,20 @@ function DateTimeStep({ date, time, onDate, onTime }) {
     return out;
   }, [month]);
 
+  useEffect(() => {
+    if (!date || !barberId) return;
+    async function fetchSlots() {
+      setLoadingSlots(true);
+      const dateStr = date.toISOString().split('T')[0];
+      const res = await appointmentsService.getAvailableSlots(dateStr, barberId);
+      // Las horas de la base de datos vienen como "14:00:00", mapear a "14:00"
+      const formattedSlots = (res?.booked || []).map(t => t.slice(0, 5));
+      setBookedSlots(formattedSlots);
+      setLoadingSlots(false);
+    }
+    fetchSlots();
+  }, [date, barberId]);
+
   const getSlots = () => {
     if (!date) return [];
     const dayName = dayNames[date.getDay()];
@@ -139,7 +234,10 @@ function DateTimeStep({ date, time, onDate, onTime }) {
     const slots = [];
     let h = openH, m = openM;
     while (h < closeH || (h === closeH && m < closeM)) {
-      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+      const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      if (!bookedSlots.includes(timeStr)) {
+        slots.push(timeStr);
+      }
       m += 60;
       if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
     }
@@ -204,17 +302,25 @@ function DateTimeStep({ date, time, onDate, onTime }) {
               <p className="text-sm text-[#9A9489] mb-4">
                 {date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              <div className="grid grid-cols-3 gap-2">
-                {slots.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => onTime(s)}
-                    className={`slot rounded-lg font-mono ${time === s ? 'active' : ''}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+              {loadingSlots ? (
+                <div className="flex justify-center p-4">
+                  <div className="w-5 h-5 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : slots.length === 0 ? (
+                <p className="text-sm text-amber-500/80 p-3 bg-amber-500/10 rounded-lg">No hay horarios disponibles en esta fecha.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {slots.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => onTime(s)}
+                      className={`slot rounded-lg font-mono ${time === s ? 'active' : ''}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-[#6A655C]">Selecciona una fecha</p>
@@ -225,12 +331,12 @@ function DateTimeStep({ date, time, onDate, onTime }) {
   );
 }
 
-function ContactStep({ contact, onChange, summary }) {
+function ContactStep({ contact, onChange, summary, error }) {
   return (
     <div className="animate-in">
       <div className="mb-6">
         <h3 className="text-xl sm:text-2xl font-medium text-[#F5F1E8]">Tus datos</h3>
-        <p className="text-sm text-[#9A9489] mt-1">Para confirmar tu reserva.</p>
+        <p className="text-sm text-[#9A9489] mt-1">Verifica tus datos para confirmar tu reserva.</p>
       </div>
 
       <div className="space-y-5 mb-8">
@@ -258,17 +364,24 @@ function ContactStep({ contact, onChange, summary }) {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-5 flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+          <Icon name="AlertCircle" size={16} className="text-red-400 shrink-0 mt-0.5" />
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
+
       <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <h4 className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A] mb-4">Resumen</h4>
         <div className="space-y-3">
-          <SummaryRow label="Servicio" value={summary.service.name} />
+          <SummaryRow label="Servicio" value={summary.service?.name} />
           <SummaryRow label="Barbero" value="Fernando Mendoza" />
           <SummaryRow label="Fecha" value={summary.date?.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })} />
           <SummaryRow label="Hora" value={summary.time} />
-          <SummaryRow label="Duración" value={`${summary.service.duration} min`} />
+          <SummaryRow label="Duración" value={`${summary.service?.duration_minutes || 45} min`} />
           <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
             <span className="text-sm text-[#9A9489]">Total</span>
-            <span className="font-mono text-lg text-[#E8C77E]">{formatCOP(summary.service.price)}</span>
+            <span className="font-mono text-lg text-[#E8C77E]">{formatCOP(summary.service?.price || 0)}</span>
           </div>
         </div>
       </div>
@@ -303,7 +416,7 @@ function SuccessView({ service, date, time, contact, onReset }) {
       <div className="mt-8 inline-flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="px-5 py-4 text-center" style={{ background: 'rgba(255,255,255,0.02)' }}>
           <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mb-1">Servicio</div>
-          <div className="text-sm font-medium text-[#F5F1E8]">{service.name}</div>
+          <div className="text-sm font-medium text-[#F5F1E8]">{service?.name}</div>
         </div>
         <div className="px-5 py-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mb-1">Fecha</div>

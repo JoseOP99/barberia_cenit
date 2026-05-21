@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
 import { Icon, Logo } from '../components/Shared';
-import { CENIT_DATA, OPERATING_HOURS, formatCOP } from '../data/cenitData';
+import { OPERATING_HOURS } from '../data/cenitData';
 import { useNavigate } from 'react-router-dom';
+import InventoryManager from '../components/admin/InventoryManager';
+import { DashboardView, CitasView } from '../components/admin/CalendarManager';
+import ServicesManager from '../components/admin/ServicesManager';
+import BarbersManager from '../components/admin/BarbersManager';
+import ScheduleManager from '../components/admin/ScheduleManager';
+import CustomerManager from '../components/admin/CustomerManager';
+import RaffleManager from '../components/admin/RaffleManager';
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'LayoutDashboard', label: 'Dashboard' },
   { id: 'citas', icon: 'Calendar', label: 'Citas' },
+  { id: 'clientes', icon: 'Users', label: 'Clientes' },
+  { id: 'tienda', icon: 'ShoppingBag', label: 'Tienda' },
+  { id: 'servicios', icon: 'Scissors', label: 'Servicios' },
+  { id: 'equipo', icon: 'UserCircle', label: 'Equipo' },
   { id: 'horario', icon: 'Clock', label: 'Horario' },
+  { id: 'sorteos', icon: 'Gift', label: 'Sorteos' },
   { id: 'ajustes', icon: 'Settings', label: 'Ajustes' },
 ];
 
@@ -68,124 +80,22 @@ export default function Admin() {
         <main className="flex-1 p-5 sm:p-8 overflow-y-auto">
           {view === 'dashboard' && <DashboardView />}
           {view === 'citas' && <CitasView />}
-          {view === 'horario' && <HorarioView />}
-          {view === 'ajustes' && <PlaceholderView name="Ajustes" />}
+          {view === 'clientes' && <CustomerManager />}
+          {view === 'tienda' && <InventoryManager />}
+          {view === 'servicios' && <ServicesManager />}
+          {view === 'equipo' && <BarbersManager />}
+          {view === 'horario' && <ScheduleManager />}
+          {view === 'sorteos' && <RaffleManager />}
+          {view === 'ajustes' && <PlaceholderView name="Ajustes Generales" />}
         </main>
       </div>
     </div>
   );
 }
 
-const STATUS_MAP = {
-  confirmed: { label: 'Confirmada', cls: 'text-[#C9A86A] bg-[#C9A86A]/10 border-[#C9A86A]/30' },
-  'in-chair': { label: 'En silla', cls: 'text-[#7FA86A] bg-[#7FA86A]/10 border-[#7FA86A]/30' },
-  pending: { label: 'Pendiente', cls: 'text-[#9A9489] bg-[#9A9489]/10 border-[#9A9489]/30' },
-};
+// Las vistas de Dashboard y Citas fueron movidas a CalendarManager.jsx
 
-function DashboardView() {
-  const todayCitas = CENIT_DATA.appointments.length;
-  const totalIngresos = todayCitas * CENIT_DATA.services[0].price;
-  return (
-    <div className="space-y-6 animate-in">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KPI label="Citas hoy" value={String(todayCitas).padStart(2, '0')} icon="Calendar" />
-        <KPI label="Ingresos hoy" value={formatCOP(totalIngresos)} icon="TrendingUp" />
-        <KPI label="Próxima cita" value={CENIT_DATA.appointments.find(a => a.status === 'pending')?.time || '—'} icon="Clock" />
-      </div>
-
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-        <div className="px-5 py-4 flex items-center justify-between border-b border-white/[0.06]">
-          <h3 className="text-lg font-medium text-[#F5F1E8]">Citas del día</h3>
-        </div>
-        <AppointmentsTable />
-      </div>
-    </div>
-  );
-}
-
-function CitasView() {
-  return (
-    <div className="animate-in">
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <h3 className="text-lg font-medium text-[#F5F1E8]">Todas las citas</h3>
-        </div>
-        <AppointmentsTable />
-      </div>
-    </div>
-  );
-}
-
-function HorarioView() {
-  const dayLabels = {
-    monday: 'Lunes', tuesday: 'Martes', wednesday: 'Miércoles', thursday: 'Jueves',
-    friday: 'Viernes', saturday: 'Sábado', sunday: 'Domingo',
-  };
-  return (
-    <div className="animate-in space-y-6">
-      <p className="text-sm text-[#9A9489]">Configura tu horario de atención. Los cambios se aplicarán a nuevas reservas.</p>
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-white/[0.06]">
-              <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Día</th>
-              <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Apertura</th>
-              <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Cierre</th>
-              <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(OPERATING_HOURS).map(([key, hours]) => (
-              <tr key={key} className="border-b border-white/[0.06] last:border-0">
-                <td className="px-5 py-3.5 text-sm text-[#F5F1E8]">{dayLabels[key]}</td>
-                <td className="px-5 py-3.5 font-mono text-sm text-[#9A9489]">{hours?.open || '—'}</td>
-                <td className="px-5 py-3.5 font-mono text-sm text-[#9A9489]">{hours?.close || '—'}</td>
-                <td className="px-5 py-3.5">
-                  <span className={`inline-flex px-2.5 py-1 text-[10px] tracking-wider uppercase rounded-full border ${
-                    hours ? 'text-[#7FA86A] bg-[#7FA86A]/10 border-[#7FA86A]/30' : 'text-[#6A655C] bg-white/[0.03] border-white/[0.06]'
-                  }`}>
-                    {hours ? 'Abierto' : 'Cerrado'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-[#6A655C]">Próximamente podrás editar estos horarios directamente desde aquí.</p>
-    </div>
-  );
-}
-
-function AppointmentsTable() {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="border-b border-white/[0.06]">
-            {['Hora', 'Cliente', 'Teléfono', 'Estado'].map(h => (
-              <th key={h} className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {CENIT_DATA.appointments.map(a => (
-            <tr key={a.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors">
-              <td className="px-5 py-3.5 font-mono text-sm text-[#E8C77E]">{a.time}</td>
-              <td className="px-5 py-3.5 text-sm text-[#F5F1E8]">{a.client}</td>
-              <td className="px-5 py-3.5 text-sm text-[#9A9489]">{a.phone}</td>
-              <td className="px-5 py-3.5">
-                <span className={`inline-flex px-2.5 py-1 text-[10px] tracking-wider uppercase rounded-full border ${STATUS_MAP[a.status].cls}`}>
-                  {STATUS_MAP[a.status].label}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+// AppointmentsTable was moved to CalendarManager.jsx
 
 function KPI({ label, value, icon }) {
   return (

@@ -3,65 +3,76 @@ import { supabase } from './supabaseClient';
 const handleError = (error, context) => {
   const errorMessage = error?.message || 'Error desconocido';
   console.error(`[AuthService - ${context}]:`, errorMessage);
-  throw new Error(`${context}: ${errorMessage}`);
+  throw new Error(errorMessage);
 };
 
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export const authService = {
-  // Registrar nuevo usuario
-  async signUp(email, password, fullName = '') {
+  /**
+   * Registro extendido con todos los campos del perfil.
+   * El trigger on_auth_user_created crea el profile automáticamente.
+   */
+  async signUp({ email, password, first_name, second_name, first_lastname, second_lastname, phone, identification, identification_type }) {
     try {
       if (!email || !password) throw new Error('Email y contraseña son requeridos');
       if (!validateEmail(email)) throw new Error('Email inválido');
       if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+      if (!first_name || !first_lastname) throw new Error('Nombre y apellido son requeridos');
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName }
+          data: {
+            first_name,
+            second_name: second_name || null,
+            first_lastname,
+            second_lastname: second_lastname || null,
+            phone: phone || null,
+            identification: identification || null,
+            identification_type: identification_type || 'CC',
+          }
         }
       });
 
       if (error) handleError(error, 'signUp');
-
-      // Crear perfil de usuario
-      if (data?.user?.id) {
-        await this.upsertProfile(data.user.id, {
-          full_name: fullName,
-          email,
-          role: 'customer'
-        });
-      }
-
       return data;
     } catch (err) {
       handleError(err, 'signUp');
     }
   },
 
-  // Login
   async signIn(email, password) {
     try {
       if (!email || !password) throw new Error('Email y contraseña son requeridos');
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) handleError(error, 'signIn');
+
+      // Verificar si el usuario está bloqueado
+      if (data?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.status === 'blocked') {
+          await supabase.auth.signOut();
+          throw new Error('Tu cuenta ha sido suspendida por incumplimiento. Contacta al administrador.');
+        }
+        if (profile?.status === 'suspended') {
+          await supabase.auth.signOut();
+          throw new Error('Tu cuenta está temporalmente suspendida. Contacta al administrador.');
+        }
+      }
+
       return data;
     } catch (err) {
       handleError(err, 'signIn');
     }
   },
 
-  // Logout
   async signOut() {
     try {
       const { error } = await supabase.auth.signOut();
@@ -89,30 +100,48 @@ export const authService = {
     }
   },
 
-  // Crear o actualizar perfil
-  async upsertProfile(userId, profileData) {
+  // Recuperar contraseña
+  async resetPassword(email) {
     try {
-      if (!userId) throw new Error('User ID es requerido');
+      if (!email) throw new Error('Email es requerido');
+      if (!validateEmail(email)) throw new Error('Email inválido');
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert([
-          {
-            id: userId,
-            full_name: profileData.full_name || '',
-            email: profileData.email || '',
-            phone: profileData.phone || null,
-            role: profileData.role || 'customer',
-            avatar_url: profileData.avatar_url || null,
-            updated_at: new Date().toISOString()
-          }
-        ])
-        .select();
-
-      if (error) handleError(error, 'upsertProfile');
-      return data?.[0];
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) handleError(error, 'resetPassword');
+      return true;
     } catch (err) {
-      handleError(err, 'upsertProfile');
+      handleError(err, 'resetPassword');
+    }
+  },
+
+  // Actualizar contraseña (después de reset)
+  async updatePassword(newPassword) {
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres');
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) handleError(error, 'updatePassword');
+      return true;
+    } catch (err) {
+      handleError(err, 'updatePassword');
+    }
+  },
+
+  // Reenviar correo de verificación
+  async resendVerificationEmail(email) {
+    try {
+      if (!email) throw new Error('Email es requerido');
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (error) handleError(error, 'resendVerification');
+      return true;
+    } catch (err) {
+      handleError(err, 'resendVerification');
     }
   },
 
@@ -120,13 +149,11 @@ export const authService = {
   async getProfile(userId) {
     try {
       if (!userId) throw new Error('User ID es requerido');
-
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-
       if (error) handleError(error, 'getProfile');
       return data;
     } catch (err) {
@@ -138,18 +165,14 @@ export const authService = {
   async updateProfile(userId, updates) {
     try {
       if (!userId) throw new Error('User ID es requerido');
-
       const { data, error } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', userId)
-        .select();
-
+        .select()
+        .single();
       if (error) handleError(error, 'updateProfile');
-      return data?.[0];
+      return data;
     } catch (err) {
       handleError(err, 'updateProfile');
     }
@@ -166,19 +189,7 @@ export const authService = {
     }
   },
 
-  // Obtener usuario actual completo (user + profile)
-  async getCurrentUserWithProfile() {
-    try {
-      const user = await this.getCurrentUser();
-      if (!user) return null;
-
-      const profile = await this.getProfile(user.id);
-      return { ...user, profile };
-    } catch (err) {
-      handleError(err, 'getCurrentUserWithProfile');
-    }
-  },
-
+  // Suscripción a cambios de auth
   onAuthStateChange(callback) {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session);
