@@ -9,17 +9,18 @@ import BarbersManager from '../components/admin/BarbersManager';
 import ScheduleManager from '../components/admin/ScheduleManager';
 import CustomerManager from '../components/admin/CustomerManager';
 import RaffleManager from '../components/admin/RaffleManager';
-
+import StoreReservations from '../components/admin/StoreReservations';
+import { PlaceholderView } from '../components/admin/AdminShared';
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'LayoutDashboard', label: 'Dashboard' },
   { id: 'citas', icon: 'Calendar', label: 'Citas' },
   { id: 'clientes', icon: 'Users', label: 'Clientes' },
-  { id: 'tienda', icon: 'ShoppingBag', label: 'Tienda' },
+  { id: 'reservas-tienda', icon: 'Clock', label: 'Reservas Tienda' },
+  { id: 'inventario', icon: 'ShoppingBag', label: 'Inventario' },
   { id: 'servicios', icon: 'Scissors', label: 'Servicios' },
   { id: 'equipo', icon: 'UserCircle', label: 'Equipo' },
   { id: 'horario', icon: 'Clock', label: 'Horario' },
-  { id: 'sorteos', icon: 'Gift', label: 'Sorteos' },
-  { id: 'ajustes', icon: 'Settings', label: 'Ajustes' },
+  { id: 'sorteos', icon: 'Gift', label: 'Sorteos' }
 ];
 
 export default function Admin() {
@@ -81,12 +82,12 @@ export default function Admin() {
           {view === 'dashboard' && <DashboardView />}
           {view === 'citas' && <CitasView />}
           {view === 'clientes' && <CustomerManager />}
-          {view === 'tienda' && <InventoryManager />}
+          {view === 'reservas-tienda' && <StoreReservations />}
+          {view === 'inventario' && <InventoryManager />}
           {view === 'servicios' && <ServicesManager />}
           {view === 'equipo' && <BarbersManager />}
           {view === 'horario' && <ScheduleManager />}
           {view === 'sorteos' && <RaffleManager />}
-          {view === 'ajustes' && <PlaceholderView name="Ajustes Generales" />}
         </main>
       </div>
     </div>
@@ -97,26 +98,4 @@ export default function Admin() {
 
 // AppointmentsTable was moved to CalendarManager.jsx
 
-function KPI({ label, value, icon }) {
-  return (
-    <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-[#6A655C]">{label}</span>
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,106,0.1)' }}>
-          <Icon name={icon} size={14} className="text-[#C9A86A]" />
-        </span>
-      </div>
-      <div className="font-display text-2xl text-[#F5F1E8]">{value}</div>
-    </div>
-  );
-}
 
-function PlaceholderView({ name }) {
-  return (
-    <div className="rounded-xl p-12 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <Icon name="Construction" size={32} className="mx-auto mb-4 text-[#C9A86A]" />
-      <h3 className="text-xl font-medium text-[#F5F1E8]">{name}</h3>
-      <p className="text-sm text-[#6A655C] mt-2">En desarrollo.</p>
-    </div>
-  );
-}

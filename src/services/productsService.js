@@ -20,9 +20,24 @@ export const productsService = {
         query = query.eq('collection', filters.collection);
       }
 
-      const { data, error } = await query;
+      const { data: products, error } = await query;
       if (error) handleError(error, 'getAllProducts');
-      return data || [];
+      
+      // Calculate real available stock subtracting active reservations
+      const { data: activeReservations } = await supabase
+        .from('product_reservations')
+        .select('product_id')
+        .eq('status', 'active');
+      
+      const reservedCounts = {};
+      (activeReservations || []).forEach(r => {
+        reservedCounts[r.product_id] = (reservedCounts[r.product_id] || 0) + 1;
+      });
+
+      return (products || []).map(p => ({
+        ...p,
+        stock: Math.max(0, p.stock - (reservedCounts[p.id] || 0))
+      }));
     } catch (err) {
       handleError(err, 'getAllProducts');
     }

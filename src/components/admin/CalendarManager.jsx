@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '../Shared';
 import { formatCOP } from '../../data/cenitData';
 import appointmentsService from '../../services/appointmentsService';
-
+import { KPI } from './AdminShared';
 const STATUS_MAP = {
   confirmed: { label: 'Confirmada', cls: 'text-[#C9A86A] bg-[#C9A86A]/10 border-[#C9A86A]/30' },
   'in-chair': { label: 'En silla', cls: 'text-[#7FA86A] bg-[#7FA86A]/10 border-[#7FA86A]/30' },
@@ -12,19 +12,7 @@ const STATUS_MAP = {
   'no-show': { label: 'No Show', cls: 'text-orange-400 bg-orange-400/10 border-orange-400/30' }
 };
 
-function KPI({ label, value, icon }) {
-  return (
-    <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-[#6A655C]">{label}</span>
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,106,0.1)' }}>
-          <Icon name={icon} size={14} className="text-[#C9A86A]" />
-        </span>
-      </div>
-      <div className="font-display text-2xl text-[#F5F1E8]">{value}</div>
-    </div>
-  );
-}
+
 
 function AppointmentsTable({ appointments, onUpdateStatus }) {
   if (appointments.length === 0) {
@@ -55,7 +43,13 @@ function AppointmentsTable({ appointments, onUpdateStatus }) {
                 <div className="text-xs text-[#9A9489]">{a.appointment_date}</div>
               </td>
               <td className="px-5 py-3.5">
-                <div className="text-sm text-[#F5F1E8]">{a.client_name}</div>
+                <div className="text-sm text-[#F5F1E8]">
+                  {a.guest_name ? (
+                    <>{a.guest_name} <span className="text-xs text-[#6A655C] font-normal">(de {a.client_name})</span></>
+                  ) : (
+                    a.client_name
+                  )}
+                </div>
                 <div className="text-xs text-[#9A9489]">{a.client_phone}</div>
               </td>
               <td className="px-5 py-3.5">
@@ -69,28 +63,19 @@ function AppointmentsTable({ appointments, onUpdateStatus }) {
               </td>
               <td className="px-5 py-3.5 text-right">
                 <div className="flex items-center justify-end gap-2">
-                  {a.status === 'pending' && (
-                    <button onClick={() => onUpdateStatus(a.id, 'confirmed')} className="p-1.5 bg-[#C9A86A]/10 text-[#C9A86A] rounded hover:bg-[#C9A86A]/20 transition" title="Confirmar">
-                      <Icon name="Check" size={14} />
-                    </button>
-                  )}
-                  {(a.status === 'confirmed' || a.status === 'pending') && (
-                    <button onClick={() => onUpdateStatus(a.id, 'in-chair')} className="p-1.5 bg-[#7FA86A]/10 text-[#7FA86A] rounded hover:bg-[#7FA86A]/20 transition" title="En Silla">
-                      <Icon name="User" size={14} />
-                    </button>
-                  )}
-                  {a.status === 'in-chair' && (
-                    <button onClick={() => onUpdateStatus(a.id, 'completed')} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition" title="Completar">
-                      <Icon name="CheckCircle" size={14} />
-                    </button>
-                  )}
-                  {(a.status === 'pending' || a.status === 'confirmed') && (
+                  {(a.status === 'pending' || a.status === 'confirmed' || a.status === 'in-chair') && (
                     <>
-                      <button onClick={() => onUpdateStatus(a.id, 'cancelled')} className="p-1.5 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition" title="Cancelar">
-                        <Icon name="X" size={14} />
+                      <button onClick={() => onUpdateStatus(a.id, 'completed')} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Marcar como Realizado">
+                        <Icon name="CheckCircle" size={14} />
+                        <span className="hidden sm:inline">Realizado</span>
                       </button>
-                      <button onClick={() => onUpdateStatus(a.id, 'no-show')} className="p-1.5 bg-orange-500/10 text-orange-400 rounded hover:bg-orange-500/20 transition" title="No Show (No se presentó)">
+                      <button onClick={() => onUpdateStatus(a.id, 'cancelled')} className="p-1.5 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Cancelar Cita">
+                        <Icon name="X" size={14} />
+                        <span className="hidden sm:inline">Cancelar</span>
+                      </button>
+                      <button onClick={() => onUpdateStatus(a.id, 'no-show')} className="p-1.5 bg-orange-500/10 text-orange-400 rounded hover:bg-orange-500/20 transition flex items-center gap-1.5 text-xs px-2" title="El cliente no se presentó">
                         <Icon name="UserMinus" size={14} />
+                        <span className="hidden xl:inline">No Show</span>
                       </button>
                     </>
                   )}
@@ -109,20 +94,31 @@ export function DashboardView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const loadTodayAppointments = async () => {
+      if (isMounted) setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const data = await appointmentsService.getAllAppointments({ date: today });
+      if (isMounted) {
+        setCitas(data || []);
+        setLoading(false);
+      }
+    };
     loadTodayAppointments();
+    return () => { isMounted = false; };
   }, []);
 
-  const loadTodayAppointments = async () => {
+  const reloadTodayAppointments = async () => {
     setLoading(true);
     const today = new Date().toISOString().split('T')[0];
     const data = await appointmentsService.getAllAppointments({ date: today });
-    setCitas(data);
+    setCitas(data || []);
     setLoading(false);
   };
 
   const handleUpdateStatus = async (id, status) => {
     await appointmentsService.updateAppointment(id, { status });
-    loadTodayAppointments(); // Recargar después de actualizar
+    reloadTodayAppointments(); // Recargar después de actualizar
   };
 
   const handleCloseDay = async (status) => {
@@ -137,7 +133,7 @@ export function DashboardView() {
     setLoading(true);
     try {
       await Promise.all(pendings.map(c => appointmentsService.updateAppointment(c.id, { status })));
-      await loadTodayAppointments();
+      await reloadTodayAppointments();
     } catch (err) {
       alert("Error cerrando jornada: " + err.message);
       setLoading(false);
@@ -173,7 +169,7 @@ export function DashboardView() {
               Rechazar Restantes
             </button>
             <div className="w-[1px] h-4 bg-white/[0.1] mx-1"></div>
-            <button onClick={loadTodayAppointments} className="text-[#9A9489] hover:text-[#C9A86A] transition" title="Actualizar">
+            <button onClick={reloadTodayAppointments} className="text-[#9A9489] hover:text-[#C9A86A] transition" title="Actualizar">
               <Icon name="RefreshCw" size={16} />
             </button>
           </div>
@@ -193,19 +189,29 @@ export function CitasView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const loadAllAppointments = async () => {
+      if (isMounted) setLoading(true);
+      const data = await appointmentsService.getAllAppointments();
+      if (isMounted) {
+        setCitas(data || []);
+        setLoading(false);
+      }
+    };
     loadAllAppointments();
+    return () => { isMounted = false; };
   }, []);
 
-  const loadAllAppointments = async () => {
+  const reloadAllAppointments = async () => {
     setLoading(true);
     const data = await appointmentsService.getAllAppointments();
-    setCitas(data);
+    setCitas(data || []);
     setLoading(false);
   };
 
   const handleUpdateStatus = async (id, status) => {
     await appointmentsService.updateAppointment(id, { status });
-    loadAllAppointments();
+    reloadAllAppointments();
   };
 
   return (
@@ -213,7 +219,7 @@ export function CitasView() {
       <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
           <h3 className="text-lg font-medium text-[#F5F1E8]">Historial Completo de Citas</h3>
-          <button onClick={loadAllAppointments} className="text-[#9A9489] hover:text-[#C9A86A] transition">
+          <button onClick={reloadAllAppointments} className="text-[#9A9489] hover:text-[#C9A86A] transition">
             <Icon name="RefreshCw" size={16} />
           </button>
         </div>

@@ -3,6 +3,7 @@ import { Icon } from '../components/Shared';
 import { CENIT_DATA, CONTACT_INFO, OPERATING_HOURS, formatCOP } from '../data/cenitData';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import ScrollReveal from '../components/ScrollReveal';
 
 function getTodayStatus() {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -108,16 +109,16 @@ export default function Home() {
       <section className="py-24 relative z-10">
         <div className="max-w-[1400px] mx-auto px-6 sm:px-12">
           
-          <motion.div variants={itemVariants} className="mb-16">
+          <ScrollReveal className="mb-16">
             <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C9A86A]">La Experiencia</span>
             <h2 className="text-4xl sm:text-5xl mt-4 tracking-tight text-[#F5F1E8]">
               El estándar <span className="font-display italic text-gold-gradient">Cénit</span>
             </h2>
-          </motion.div>
+          </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             
-            <motion.div variants={itemVariants} className="md:col-span-8 glass-panel rounded-[2rem] p-10 flex flex-col justify-between group hover:border-[#C9A86A]/40 transition-colors">
+            <ScrollReveal delay={0.2} className="md:col-span-8 glass-panel rounded-[2rem] p-10 flex flex-col justify-between group hover:border-[#C9A86A]/40 transition-colors">
               <div>
                 <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8">
                    <Icon name="User" size={24} className="text-[#C9A86A]" />
@@ -132,9 +133,9 @@ export default function Home() {
                    Ver disponibilidad <Icon name="ArrowRight" size={16} />
                  </button>
               </div>
-            </motion.div>
+            </ScrollReveal>
 
-            <motion.div variants={itemVariants} className="md:col-span-4 glass-panel rounded-[2rem] p-10 animate-float" style={{ animationDelay: '0.5s' }}>
+            <ScrollReveal delay={0.4} className="md:col-span-4 glass-panel rounded-[2rem] p-10 animate-float" style={{ animationDelay: '0.5s' }}>
               <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8">
                  <Icon name="Clock" size={24} className="text-[#C9A86A]" />
               </div>
@@ -144,7 +145,7 @@ export default function Home() {
                 <ScheduleRow day="Mar – Sáb" hours="8:30AM – 6:00PM" />
                 <ScheduleRow day="Domingo" hours="8:30AM – 3:00PM" />
               </div>
-            </motion.div>
+            </ScrollReveal>
 
           </div>
         </div>
@@ -152,7 +153,7 @@ export default function Home() {
 
       {/* CTA Final */}
       <section className="py-32 relative z-10 border-t border-white/[0.04]">
-        <motion.div variants={itemVariants} className="max-w-3xl mx-auto px-6 text-center">
+        <ScrollReveal y={50} className="max-w-3xl mx-auto px-6 text-center">
           <div className="w-24 h-24 mx-auto bg-gradient-to-b from-[#C9A86A]/20 to-transparent rounded-full blur-2xl mb-8"></div>
           <h2 className="text-5xl sm:text-7xl tracking-tighter leading-[0.95] text-[#F5F1E8] mb-8">
             Asegura tu <span className="font-display italic text-gold-gradient">espacio</span>.
@@ -164,7 +165,7 @@ export default function Home() {
             <Icon name="Calendar" size={18} />
             Agendar Ahora
           </button>
-        </motion.div>
+        </ScrollReveal>
       </section>
     </motion.div>
   );

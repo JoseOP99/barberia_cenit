@@ -4,8 +4,8 @@ import { formatCOP } from '../../data/cenitData';
 import useProducts from '../../hooks/useProducts';
 
 const INITIAL_FORM = {
-  name: '', description: '', price: '', stock: '', collection: '',
-  material: '', color_name: '', color_hex: '#1A1816', accent_hex: '#C9A86A',
+  name: '', description: '', price: '', stock: 1, collection: 'Gorra',
+  material: '', size: 'Ajustable', color_name: 'Negro', color_hex: '#1A1816', accent_hex: '#C9A86A',
   tag: '', visible: true
 };
 
@@ -20,7 +20,7 @@ export default function InventoryManager() {
     setEditingId(p.id);
     setForm({
       name: p.name, description: p.description || '', price: p.price, stock: p.stock,
-      collection: p.collection || '', material: p.material || '', color_name: p.color_name || '',
+      collection: p.collection || '', material: p.material || '', size: p.size || 'Ajustable', color_name: p.color_name || '',
       color_hex: p.color_hex || '#1A1816', accent_hex: p.accent_hex || '#C9A86A',
       tag: p.tag || '', visible: p.visible
     });
@@ -102,7 +102,7 @@ export default function InventoryManager() {
                   <tr key={p.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="text-sm text-[#F5F1E8] font-medium">{p.name}</div>
-                      <div className="text-xs text-[#6A655C]">{p.collection || 'Básicos'}</div>
+                      <div className="text-xs text-[#6A655C]">{p.collection || 'Básicos'} • {p.color_name || 'Negro'}</div>
                     </td>
                     <td className="px-5 py-3.5 font-mono text-sm text-[#E8C77E]">{formatCOP(p.price)}</td>
                     <td className="px-5 py-3.5 font-mono text-sm">
@@ -135,71 +135,82 @@ export default function InventoryManager() {
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 max-w-2xl">
           <h3 className="text-lg font-medium text-[#F5F1E8] mb-6">{editingId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Nombre *</label>
                 <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
               <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Colección</label>
-                <input value={form.collection} onChange={e => setForm({...form, collection: e.target.value})}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
-                  placeholder="Ej: Essentials" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Precio *</label>
                 <input required type="number" min="0" value={form.price} onChange={e => setForm({...form, price: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Stock *</label>
                 <input required type="number" min="0" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
+              <div>
+                <label className="block text-xs text-[#9A9489] mb-1">Colección</label>
+                <input list="colecciones" value={form.collection} onChange={e => setForm({...form, collection: e.target.value})}
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
+                  placeholder="Escribe o elige..." />
+                <datalist id="colecciones">
+                  <option value="Gorra" />
+                  <option value="Camiseta" />
+                  <option value="Básicos" />
+                  <option value="Edición Limitada" />
+                </datalist>
+              </div>
+              <div>
+                <label className="block text-xs text-[#9A9489] mb-1">Color Base</label>
+                <input list="colores" value={form.color_name} onChange={e => {
+                    const val = e.target.value;
+                    let hex = '#1A1816'; // Default Negro
+                    const lowerVal = val.toLowerCase();
+                    if(lowerVal.includes('blanco')) hex = '#F5F1E8';
+                    if(lowerVal.includes('dorado') || lowerVal.includes('oro')) hex = '#C9A86A';
+                    if(lowerVal.includes('verde')) hex = '#7FA86A';
+                    if(lowerVal.includes('rojo')) hex = '#C56B5A';
+                    if(lowerVal.includes('azul')) hex = '#3B82F6';
+                    if(lowerVal.includes('gris')) hex = '#9CA3AF';
+                    setForm({...form, color_name: val, color_hex: hex});
+                  }}
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
+                  placeholder="Escribe o elige..."
+                />
+                <datalist id="colores">
+                  <option value="Negro" />
+                  <option value="Blanco" />
+                  <option value="Dorado" />
+                  <option value="Verde" />
+                  <option value="Rojo" />
+                  <option value="Azul" />
+                  <option value="Gris" />
+                </datalist>
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Nombre Color</label>
-                <input value={form.color_name} onChange={e => setForm({...form, color_name: e.target.value})}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
+                <label className="block text-xs text-[#9A9489] mb-1">Talla</label>
+                <input value={form.size} onChange={e => setForm({...form, size: e.target.value})}
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
+                  placeholder="Ej: Ajustable, M, L..." />
               </div>
-              <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Color Base (Hex)</label>
-                <input type="color" value={form.color_hex} onChange={e => setForm({...form, color_hex: e.target.value})}
-                  className="w-full h-[38px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-1 py-1 cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Color Acento (Hex)</label>
-                <input type="color" value={form.accent_hex} onChange={e => setForm({...form, accent_hex: e.target.value})}
-                  className="w-full h-[38px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-1 py-1 cursor-pointer" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Material</label>
                 <input value={form.material} onChange={e => setForm({...form, material: e.target.value})}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Etiqueta (NUEVO, AGOTADO)</label>
-                <input value={form.tag} onChange={e => setForm({...form, tag: e.target.value})}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
+                  placeholder="Ej: Algodón..." />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs text-[#9A9489] mb-1">Descripción</label>
-              <textarea rows="3" value={form.description} onChange={e => setForm({...form, description: e.target.value})}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
-            </div>
-
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.06]">
               <input type="checkbox" id="visible" checked={form.visible} onChange={e => setForm({...form, visible: e.target.checked})}
                 className="accent-[#C9A86A]" />
               <label htmlFor="visible" className="text-sm text-[#F5F1E8]">Visible en la tienda</label>

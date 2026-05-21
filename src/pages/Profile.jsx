@@ -1,24 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import appointmentsService from '../services/appointmentsService';
+import storeService from '../services/storeService';
 import { Icon } from '../components/Shared';
 import { formatCOP } from '../data/cenitData';
 
 export default function Profile() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const [appointments, setAppointments] = useState([]);
+  const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadAppointments() {
       if (user?.id) {
-        setLoading(true);
-        const data = await appointmentsService.getUserAppointments(user.id);
-        setAppointments(data);
-        setLoading(false);
+        if (isMounted) setLoading(true);
+        try {
+          const [data, rData] = await Promise.all([
+            appointmentsService.getUserAppointments(user.id),
+            storeService.getUserReservations(user.id)
+          ]);
+          if (isMounted) {
+            setAppointments(data || []);
+            setReservations(rData || []);
+          }
+        } catch (err) {
+          console.error("Error loading profile:", err);
+          if (isMounted) {
+            setAppointments([]);
+            setReservations([]);
+          }
+        } finally {
+          if (isMounted) setLoading(false);
+        }
       }
     }
     loadAppointments();
+    return () => { isMounted = false; };
   }, [user]);
 
   const getStatusBadge = (status) => {
@@ -36,8 +55,8 @@ export default function Profile() {
     }
   };
 
-  const activeAppointments = appointments.filter(a => a.status === 'pending' || a.status === 'confirmed');
-  const pastAppointments = appointments.filter(a => a.status === 'cancelled' || a.status === 'completed' || a.status === 'rejected');
+  const activeAppointments = (appointments || []).filter(a => a.status === 'pending' || a.status === 'confirmed');
+  const pastAppointments = (appointments || []).filter(a => a.status === 'cancelled' || a.status === 'completed' || a.status === 'rejected');
 
   return (
     <div className="animate-in max-w-4xl mx-auto px-5 sm:px-8 py-10 sm:py-16">
@@ -116,6 +135,63 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Eliminada la sección de Sorteos (movida a Sorteos.jsx) */}
+
+      {/* Mis Reservas de Tienda */}
+      <div className="mt-12 pt-12 border-t border-white/[0.06]">
+        <h2 className="text-xl font-medium text-[#F5F1E8] mb-6 flex items-center gap-2">
+          <Icon name="ShoppingBag" size={20} className="text-[#C9A86A]" />
+          Mis Reservas de Tienda
+        </h2>
+
+        {loading ? (
+          <div className="p-8 text-center"><div className="w-6 h-6 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin mx-auto" /></div>
+        ) : reservations.length > 0 ? (
+          <div className="grid gap-4">
+            {reservations.map(res => {
+              const p = res.products;
+              const isActive = res.status === 'active';
+              return (
+                <div key={res.id} className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
+                  isActive ? 'bg-[#C9A86A]/5 border-[#C9A86A]/20' : 'bg-white/[0.02] border-white/[0.04]'
+                }`}>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2.5 py-1 text-[10px] uppercase tracking-wider rounded-full border ${
+                        res.status === 'active' ? 'bg-[#C9A86A]/10 text-[#C9A86A] border-[#C9A86A]/20' : 
+                        res.status === 'sold' ? 'bg-[#7FA86A]/10 text-[#7FA86A] border-[#7FA86A]/20' : 
+                        res.status === 'cancelled' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                        'bg-red-500/10 text-red-500 border-red-500/20' // expired
+                      }`}>
+                        {res.status === 'sold' ? 'Comprado' : res.status === 'cancelled' ? 'Cancelada' : res.status === 'expired' ? 'Expirada' : 'Reserva Activa'}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-medium text-[#F5F1E8]">{p?.name || 'Producto Desconocido'}</h3>
+                    <div className="text-xs text-[#9A9489] mt-1">
+                      {isActive ? (
+                        <span className="text-[#E8C77E]">
+                          Expira a las: {new Date(res.expires_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      ) : (
+                        `Reservado el ${new Date(res.created_at).toLocaleDateString()}`
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-left sm:text-right shrink-0">
+                    <div className="font-mono text-[#E8C77E]">{formatCOP(p?.price || 0)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="glass-panel p-8 rounded-2xl text-center">
+            <Icon name="ShoppingBag" size={32} className="mx-auto text-[#6A655C] mb-3" />
+            <p className="text-[#9A9489]">No tienes reservas de tienda recientes.</p>
+          </div>
+        )}
+      </div>
 
     </div>
   );

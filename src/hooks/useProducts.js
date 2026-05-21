@@ -27,9 +27,19 @@ export function useProducts(options = {}) {
   }, [adminMode]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (autoFetch) {
-      fetchProducts();
+      fetchProducts().then(data => {
+        if (!isMounted) {
+          // Ignorar resultado si se desmontó
+        }
+      });
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [autoFetch, fetchProducts]);
 
   const getProduct = useCallback(async (id) => {

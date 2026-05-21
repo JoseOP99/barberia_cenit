@@ -17,7 +17,7 @@ export default function Booking() {
   const [step, setStep] = useState(0);
   const [date, setDate] = useState(null);
   const [time, setTime] = useState(null);
-  const [contact, setContact] = useState({ name: '', phone: '' });
+  const [contact, setContact] = useState({ name: '', phone: '', guestName: '', isForGuest: false });
   const [submitted, setSubmitted] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [errorSubmit, setErrorSubmit] = useState('');
@@ -26,7 +26,9 @@ export default function Booking() {
     if (profile) {
       setContact({ 
         name: `${profile.first_name} ${profile.first_lastname}`.trim(), 
-        phone: profile.phone || '' 
+        phone: profile.phone || '',
+        guestName: '',
+        isForGuest: false
       });
     }
   }, [profile]);
@@ -44,7 +46,10 @@ export default function Booking() {
 
   const service = services.find(s => s.id === selectedServiceId) || services[0];
 
-  const canNext = [(date && time), (contact.name && contact.phone)][step];
+  const canNext = [
+    (date && time), 
+    (contact.name && contact.phone && (!contact.isForGuest || contact.guestName.trim()))
+  ][step];
 
   const goNext = async () => {
     if (step === 0 && canNext) setStep(1);
@@ -52,7 +57,10 @@ export default function Booking() {
       setLoadingSubmit(true);
       setErrorSubmit('');
       try {
-        const appointment_date = date.toISOString().split('T')[0];
+        // Usar fecha local para guardar
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - (offset*60*1000));
+        const appointment_date = localDate.toISOString().split('T')[0];
         // Asumiendo que `time` viene en formato HH:MM (ej. "14:00")
         const appointment_time = time + ":00";
         
@@ -68,7 +76,7 @@ export default function Booking() {
           user_id: user?.id,
           barber_id: barber?.id,
           service_id: service?.id,
-          client_name: contact.name,
+          client_name: contact.isForGuest ? `${contact.guestName} (Reserva de: ${contact.name})` : contact.name,
           client_phone: contact.phone,
           appointment_date,
           appointment_time,
@@ -89,7 +97,7 @@ export default function Booking() {
     setSubmitted(false);
     setDate(null);
     setTime(null);
-    setContact({ name: '', phone: '' });
+    setContact({ name: '', phone: '', guestName: '', isForGuest: false });
   };
 
   return (
@@ -148,7 +156,7 @@ export default function Booking() {
         )}
 
         <div className="rounded-2xl p-5 sm:p-8" style={{
-          background: 'rgba(255,255,255,0.03)',
+          background: 'rgba(12, 11, 10, 0.96)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.08)',
         }}>
@@ -213,7 +221,10 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
     if (!date || !barberId) return;
     async function fetchSlots() {
       setLoadingSlots(true);
-      const dateStr = date.toISOString().split('T')[0];
+      // Usar fecha local YYYY-MM-DD para evitar desfase de zona horaria
+      const offset = date.getTimezoneOffset()
+      const localDate = new Date(date.getTime() - (offset*60*1000))
+      const dateStr = localDate.toISOString().split('T')[0];
       const res = await appointmentsService.getAvailableSlots(dateStr, barberId);
       // Las horas de la base de datos vienen como "14:00:00", mapear a "14:00"
       const formattedSlots = (res?.booked || []).map(t => t.slice(0, 5));
@@ -232,10 +243,23 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
     const [openH, openM] = hours.open.split(':').map(Number);
     const [closeH, closeM] = hours.close.split(':').map(Number);
     const slots = [];
+    const isToday = date.toDateString() === (new Date()).toDateString();
+    const now = new Date();
+
     let h = openH, m = openM;
     while (h < closeH || (h === closeH && m < closeM)) {
       const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      if (!bookedSlots.includes(timeStr)) {
+      
+      let isPastSlot = false;
+      if (isToday) {
+        // "que me deje reservar de la hora actual a una hora mas pa alante apenas"
+        // Si la hora del slot es menor o igual a la hora actual, está bloqueado.
+        if (h <= now.getHours()) {
+          isPastSlot = true;
+        }
+      }
+
+      if (!bookedSlots.includes(timeStr) && !isPastSlot) {
         slots.push(timeStr);
       }
       m += 60;
@@ -255,7 +279,7 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
 
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
-          <div className="rounded-xl p-4 sm:p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-xl p-4 sm:p-5" style={{ background: 'rgba(15, 14, 12, 0.98)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between mb-4">
               <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
                 className="w-9 h-9 rounded-lg flex items-center justify-center text-[#9A9489] hover:text-[#E8C77E] transition-colors"
@@ -341,7 +365,38 @@ function ContactStep({ contact, onChange, summary, error }) {
 
       <div className="space-y-5 mb-8">
         <div>
-          <label className="block text-[10px] tracking-widest uppercase text-[#6A655C] mb-2">Nombre</label>
+          <label className="flex items-center gap-3 cursor-pointer group w-fit">
+            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+              contact.isForGuest ? 'bg-[#C9A86A] border-[#C9A86A]' : 'bg-transparent border-white/20 group-hover:border-white/40'
+            }`}>
+              {contact.isForGuest && <Icon name="Check" size={12} className="text-[#1A1408]" />}
+            </div>
+            <input 
+              type="checkbox" 
+              checked={contact.isForGuest}
+              onChange={e => onChange({ ...contact, isForGuest: e.target.checked })}
+              className="hidden"
+            />
+            <span className="text-sm text-[#F5F1E8]">¿Es para otra persona?</span>
+          </label>
+        </div>
+
+        {contact.isForGuest && (
+          <div className="animate-in slide-in-from-top-2">
+            <label className="block text-[10px] tracking-widest uppercase text-[#C9A86A] mb-2">Nombre de la persona que asiste *</label>
+            <input
+              type="text"
+              value={contact.guestName}
+              onChange={e => onChange({ ...contact, guestName: e.target.value })}
+              placeholder="Ej. Mario Mendoza"
+              className="w-full bg-transparent rounded-xl px-4 py-3.5 text-sm text-[#F5F1E8] placeholder-[#6A655C] outline-none focus:border-[#C9A86A] transition-colors"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-[10px] tracking-widest uppercase text-[#6A655C] mb-2">Tu Nombre (Quien Reserva)</label>
           <input
             type="text"
             value={contact.name}
@@ -371,7 +426,7 @@ function ContactStep({ contact, onChange, summary, error }) {
         </div>
       )}
 
-      <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-xl p-5" style={{ background: 'rgba(15, 14, 12, 0.98)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <h4 className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A] mb-4">Resumen</h4>
         <div className="space-y-3">
           <SummaryRow label="Servicio" value={summary.service?.name} />

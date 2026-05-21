@@ -20,7 +20,7 @@ function InputField({ label, id, error, ...props }) {
         id={id}
         className="w-full px-4 py-3 rounded-xl text-sm text-[#F5F1E8] placeholder-[#6A655C] outline-none transition-all focus:ring-2 focus:ring-[#C9A86A]/40"
         style={{
-          background: 'rgba(255,255,255,0.04)',
+          background: '#1A1816',
           border: error ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
         }}
         {...props}
@@ -40,7 +40,7 @@ function SelectField({ label, id, options, error, ...props }) {
         id={id}
         className="w-full px-4 py-3 rounded-xl text-sm text-[#F5F1E8] outline-none transition-all cursor-pointer focus:ring-2 focus:ring-[#C9A86A]/40"
         style={{
-          background: 'rgba(255,255,255,0.04)',
+          background: '#1A1816',
           border: error ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
         }}
         {...props}
@@ -398,7 +398,7 @@ export default function Auth() {
 
         {/* Card */}
         <div className="rounded-2xl p-6 sm:p-8" style={{
-          background: 'rgba(255,255,255,0.03)',
+          background: 'rgba(12, 11, 10, 0.96)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.08)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -406,7 +406,7 @@ export default function Auth() {
           {/* Tabs */}
           {(activeTab === 'login' || activeTab === 'register') && (
             <div className="flex gap-1 p-1 rounded-xl mb-6" style={{
-              background: 'rgba(255,255,255,0.03)',
+              background: 'rgba(15, 14, 12, 0.98)',
               border: '1px solid rgba(255,255,255,0.06)',
             }}>
               {tabs.map(tab => (
