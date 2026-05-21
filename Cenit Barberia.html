@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cénit · Barbería de Autor</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Outfit:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>
+    // Expose Lucide React-style components on window.lucide
+    window.addEventListener('DOMContentLoaded', () => {
+      // We'll use window.lucide.icons via tiny adapter; but here we wrap
+      // them as small React components in shared.jsx using window.lucide.
+    });
+  </script>
+
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Build a tiny Lucide-React adapter using SVG strings -->
+  <script>
+    // Adapter: window.lucide.<Name> returns a React component that renders the icon SVG
+    (function () {
+      function makeIconComponents() {
+        if (!window.lucide || !window.lucide.icons) return false;
+        const icons = window.lucide.icons;
+        const adapter = {};
+        Object.entries(icons).forEach(([nodeName, def]) => {
+          // turn 'arrow-right' into 'ArrowRight'
+          const compName = nodeName.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('');
+          adapter[compName] = function (props) {
+            const { size = 24, strokeWidth = 2, className = '', style = {}, ...rest } = props || {};
+            const children = def.map(([tag, attrs]) => React.createElement(tag, { key: tag + JSON.stringify(attrs), ...attrs }));
+            return React.createElement('svg', {
+              xmlns: 'http://www.w3.org/2000/svg',
+              width: size,
+              height: size,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+              className,
+              style,
+              ...rest
+            }, children);
+          };
+        });
+        Object.assign(window.lucide, adapter);
+        return true;
+      }
+      // Try now and after fonts load
+      if (!makeIconComponents()) {
+        const tryUntil = setInterval(() => {
+          if (makeIconComponents()) clearInterval(tryUntil);
+        }, 50);
+      }
+    })();
+  </script>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="shared.jsx"></script>
+  <script type="text/babel" src="hero.jsx"></script>
+  <script type="text/babel" src="booking.jsx"></script>
+  <script type="text/babel" src="shop.jsx"></script>
+  <script type="text/babel" src="admin.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
