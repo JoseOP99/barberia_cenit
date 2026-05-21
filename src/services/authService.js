@@ -71,25 +71,25 @@ export const authService = {
     }
   },
 
-  // Obtener usuario actual
+  // Obtener usuario actual (retorna null si no hay sesión)
   async getCurrentUser() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) handleError(error, 'getCurrentUser');
+      if (error) return null;
       return user;
-    } catch (err) {
-      handleError(err, 'getCurrentUser');
+    } catch {
+      return null;
     }
   },
 
-  // Obtener sesión actual
+  // Obtener sesión actual (retorna null si no hay sesión)
   async getSession() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) handleError(error, 'getSession');
+      if (error) return null;
       return session;
-    } catch (err) {
-      handleError(err, 'getSession');
+    } catch {
+      return null;
     }
   },
 
@@ -120,10 +120,10 @@ export const authService = {
     }
   },
 
-  // Obtener perfil
+  // Obtener perfil (retorna null si no existe)
   async getProfile(userId) {
     try {
-      if (!userId) throw new Error('User ID es requerido');
+      if (!userId) return null;
 
       const { data, error } = await supabase
         .from('profiles')
@@ -131,10 +131,10 @@ export const authService = {
         .eq('id', userId)
         .single();
 
-      if (error) handleError(error, 'getProfile');
+      if (error) return null;
       return data;
-    } catch (err) {
-      handleError(err, 'getProfile');
+    } catch {
+      return null;
     }
   },
 
@@ -185,9 +185,10 @@ export const authService = {
 
   // Escuchar cambios de autenticación
   onAuthStateChange(callback) {
-    return supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session);
     });
+    return subscription;
   }
 };
 

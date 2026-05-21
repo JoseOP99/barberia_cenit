@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Icon, Sunburst, Corners, ROMAN } from '../components/Shared';
-import { CENIT_DATA, formatCOP } from '../data/cenitData';
+import { Icon, Sunburst, Corners } from '../components/Shared';
+import { CENIT_DATA, formatCOP, ROMAN } from '../data/cenitData';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Booking() {

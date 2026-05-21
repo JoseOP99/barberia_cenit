@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 15 npx vite)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(npm install @tailwindcss/vite --save-dev)"
+    ]
+  }
+}

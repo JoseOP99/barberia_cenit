@@ -5,18 +5,17 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJ
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Test connection
+// Test connection (silently - tables may not exist yet)
 export const testConnection = async () => {
   try {
-    const { data, error } = await supabase.from('services').select('count()', { count: 'exact' });
+    const { error } = await supabase.from('barbers').select('id').limit(1);
     if (error) {
-      console.error('Supabase connection error:', error);
+      console.warn('Supabase: tablas no encontradas (ejecutar schema.sql primero)');
       return false;
     }
-    console.log('✓ Supabase connected successfully');
+    console.log('Supabase connected');
     return true;
-  } catch (err) {
-    console.error('Connection test failed:', err);
+  } catch {
     return false;
   }
 };
