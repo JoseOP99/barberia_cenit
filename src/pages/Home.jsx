@@ -1,156 +1,217 @@
 import React from 'react';
-import { Icon, Crest, Sunburst, Corners, romanDate, ROMAN, toRoman } from '../components/Shared';
-import { CENIT_DATA, formatCOP } from '../data/cenitData';
+import { Icon } from '../components/Shared';
+import { CENIT_DATA, CONTACT_INFO, OPERATING_HOURS, formatCOP } from '../data/cenitData';
 import { useNavigate } from 'react-router-dom';
+
+function getTodayStatus() {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = days[new Date().getDay()];
+  const hours = OPERATING_HOURS[today];
+  if (!hours) return { open: false, label: 'Cerrado hoy (lunes)' };
+  return { open: true, label: `Abierto hoy · ${hours.open} – ${hours.close.replace('18:00', '6:00 PM').replace('15:00', '3:00 PM')}` };
+}
 
 export default function Home() {
   const navigate = useNavigate();
-  const today = new Date(2026, 4, 20);
-  const next = CENIT_DATA.appointments.find(a => a.status === 'pending') || CENIT_DATA.appointments[3];
+  const todayStatus = getTodayStatus();
+  const service = CENIT_DATA.services[0];
 
   return (
-    <div className="p-8 lg:p-12 fade-up min-h-full">
-      {/* Header band */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono text-xs" style={{ color: '#8B6F3F' }}>{romanDate(today).toUpperCase()}</span>
-            <span style={{ color: '#3A3340' }}>◆</span>
-            <span className="font-mono text-xs" style={{ color: '#8B6F3F' }}>TUCHÍN · 32°C</span>
-          </div>
-          <h1 className="font-display text-5xl lg:text-7xl leading-[1.05]" style={{ color: '#F1ECDE', fontStyle: 'italic', fontWeight: 400 }}>
-            Bienvenido al<br/>
-            <span className="text-gold not-italic font-roman" style={{ fontSize: '0.65em', letterSpacing: '0.18em', fontWeight: 600 }}>CLUB CÉNITT</span>
-          </h1>
-          <p className="font-mono text-xs mt-4 max-w-md" style={{ color: '#948A78' }}>
-            EST. MMXXIV · SECTOR SAN PEDRO · TUCHÍN · CÓRDOBA
-          </p>
-        </div>
+    <div className="animate-in">
+      <section className="relative overflow-hidden min-h-[85vh] flex items-center">
+        <div className="absolute inset-0 opacity-[0.02]" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, #C9A86A 1px, transparent 0)',
+          backgroundSize: '48px 48px',
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0A0A0A] to-transparent" />
 
-        <Crest size={160} className="self-center lg:self-end"/>
-      </div>
-
-      <div className="diamond-divider mb-10"><span>◆</span></div>
-
-      {/* Quick actions grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Big CTA card: Reservar */}
-        <button onClick={() => navigate('/booking')}
-          className="lg:col-span-7 corner-deco frame-double p-10 text-left group transition-all hover:bg-[#1A171C]"
-          style={{ minHeight: 280 }}>
-          <Corners/>
-          <div className="flex items-start justify-between mb-6">
-            <span className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>PRIMERA ACCIÓN</span>
-            <span className="font-mono text-[10px]" style={{ color: '#5A5347' }}>{ROMAN[0]} · DE · {ROMAN[3]}</span>
-          </div>
-          <h2 className="font-display text-4xl lg:text-5xl leading-tight mb-4" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>
-            Reserva tu próximo<br/>
-            <span className="text-gold">ritual de barbería.</span>
-          </h2>
-          <p className="text-sm max-w-md mt-6" style={{ color: '#948A78' }}>
-            Cuatro pasos. Tu servicio, tu maestro, tu hora. Sin filas. Sin prisa. Solo tu cumbre.
-          </p>
-          <div className="mt-8 flex items-center gap-3">
-            <span className="btn-gold inline-flex items-center gap-2">
-              <Icon name="Scissors" size={12}/> Reservar Cita
-            </span>
-            <span className="font-mono text-[10px]" style={{ color: '#5A5347' }}>← TAMBIÉN POR EL MENÚ LATERAL</span>
-          </div>
-        </button>
-
-        {/* Today's appointment */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="ticket">
-            <div className="flex items-center justify-between mb-4">
-              <span className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>PRÓXIMO TURNO</span>
-              <span className="pill pill-gold">EN ESPERA</span>
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24 w-full">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{
+              background: 'rgba(255,255,255,0.04)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <span className={`w-2 h-2 rounded-full ${todayStatus.open ? 'bg-[#7FA86A] animate-pulse' : 'bg-[#6A655C]'}`} />
+              <span className="text-xs text-[#B5AFA5]">{todayStatus.label}</span>
             </div>
-            <div className="font-display text-5xl mb-1" style={{ color: '#F1ECDE' }}>{next.time}</div>
-            <div className="font-mono text-xs mb-6" style={{ color: '#8B6F3F' }}>{romanDate(today).toUpperCase()}</div>
-            <div className="diamond-divider mb-4 text-[10px]">◆</div>
-            <div className="space-y-2 text-sm">
-              <HomeRow label="Cliente"  value={next.client}/>
-              <HomeRow label="Servicio" value={next.service}/>
-              <HomeRow label="Barbero"  value={next.barber}/>
-            </div>
-            <button onClick={() => navigate('/booking')} className="mt-6 font-mono text-[11px] inline-flex items-center gap-2" style={{ color: '#E8C77E' }}>
-              <Icon name="Calendar" size={12}/> AGENDAR NUEVA CITA
-            </button>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => navigate('/shop')}
-              className="corner-deco frame-thin p-5 text-left group transition-all hover:border-[#8B6F3F]">
-              <Corners/>
-              <Icon name="ShoppingBag" size={18} style={{ color: '#C9A86A' }} className="mb-3"/>
-              <div className="font-roman text-[11px]" style={{ color: '#E8C77E', letterSpacing: '0.2em' }}>BOUTIQUE</div>
-              <div className="text-xs mt-1" style={{ color: '#948A78' }}>Colección de gorras</div>
-            </button>
-            <button onClick={() => navigate('/admin')}
-              className="corner-deco frame-thin p-5 text-left transition-all hover:border-[#8B6F3F]">
-              <Corners/>
-              <Icon name="User" size={18} style={{ color: '#C9A86A' }} className="mb-3"/>
-              <div className="font-roman text-[11px]" style={{ color: '#E8C77E', letterSpacing: '0.2em' }}>MI CUENTA</div>
-              <div className="text-xs mt-1" style={{ color: '#948A78' }}>Historial · Puntos</div>
-            </button>
-          </div>
-        </div>
+            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl leading-[1.08] text-[#F5F1E8]">
+              Tu barbería de<br />
+              <span className="italic text-gold-gradient">confianza</span> en Tuchín
+            </h1>
 
-        {/* Servicios highlight */}
-        <div className="lg:col-span-12 mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Sunburst size={28}/>
-              <h3 className="font-roman text-sm" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>SERVICIOS DEL ESTABLECIMIENTO</h3>
-            </div>
-            <button onClick={() => navigate('/booking')} className="font-mono text-[11px] inline-flex items-center gap-2" style={{ color: '#948A78' }}>
-              VER TODOS <Icon name="ArrowRight" size={12}/>
-            </button>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {CENIT_DATA.services.slice(0, 6).map((s, i) => (
-              <button key={s.id} onClick={() => navigate('/booking', { state: { preselectService: s.id } })}
-                className="corner-deco frame-thin p-6 text-left hover:border-[#8B6F3F] transition-all group">
-                <Corners/>
-                <div className="flex items-baseline justify-between mb-3">
-                  <span className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.3em' }}>{ROMAN[i]}</span>
-                  <span className="font-mono text-[10px]" style={{ color: '#5A5347' }}>{s.duration} MIN</span>
-                </div>
-                <h4 className="font-display text-2xl mb-1" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{s.name}</h4>
-                <p className="text-xs mb-4" style={{ color: '#948A78' }}>{s.subtitle}</p>
-                <div className="font-mono text-sm" style={{ color: '#E8C77E' }}>{formatCOP(s.price)}</div>
+            <p className="mt-6 text-lg sm:text-xl text-[#9A9489] leading-relaxed max-w-md">
+              Cortes con dedicación por Fernando Mendoza. Sin filas, sin prisa — reserva tu hora.
+            </p>
+
+            <div className="mt-10 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigate('/reservar')}
+                className="inline-flex items-center gap-2.5 bg-[#C9A86A] text-[#1A1408] text-sm font-semibold tracking-wider uppercase px-7 py-4 rounded-full hover:bg-[#E8C77E] transition-all hover:shadow-lg hover:shadow-[#C9A86A]/20"
+              >
+                <Icon name="Calendar" size={16} />
+                Reservar Cita
               </button>
-            ))}
+              <a
+                href={CONTACT_INFO.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 text-sm font-medium tracking-wider uppercase px-7 py-4 rounded-full transition-all hover:shadow-lg" style={{
+                  background: 'rgba(37, 211, 102, 0.1)',
+                  border: '1px solid rgba(37, 211, 102, 0.25)',
+                  color: '#25D366',
+                }}
+              >
+                <Icon name="MessageCircle" size={16} />
+                WhatsApp
+              </a>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* House rules / about strip */}
-        <div className="lg:col-span-12 mt-8 corner-deco frame-double p-8 lg:p-12 grid lg:grid-cols-3 gap-8">
-          <Corners/>
-          <Pillar n="I"   t="Reserva con tiempo"   d="Cada cita reserva su silla. No aceptamos walk-ins durante hora pico."/>
-          <Pillar n="II"  t="Productos importados" d="Cremas, aceites y herramientas seleccionadas de Italia, Reino Unido y Japón."/>
-          <Pillar n="III" t="Garantía Cénitt"      d="Si no estás satisfecho con el resultado, repetimos el servicio sin costo."/>
+      <section className="py-16 sm:py-24 border-t border-white/[0.06]">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="mb-10">
+            <span className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A]">El servicio</span>
+            <h2 className="font-display text-4xl sm:text-5xl text-[#F5F1E8] mt-2">
+              Un corte, toda la <span className="italic text-gold-gradient">dedicación</span>
+            </h2>
+          </div>
+
+          <button
+            onClick={() => navigate('/reservar')}
+            className="w-full max-w-2xl text-left rounded-2xl p-8 sm:p-10 group transition-all hover:scale-[1.01]"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
+                background: 'rgba(201, 168, 106, 0.1)',
+                border: '1px solid rgba(201, 168, 106, 0.15)',
+              }}>
+                <Icon name="Scissors" size={20} className="text-[#C9A86A]" />
+              </div>
+              <span className="font-mono text-sm text-[#6A655C]">{service.duration} min</span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-medium text-[#F5F1E8] group-hover:text-[#E8C77E] transition-colors">
+              {service.name}
+            </h3>
+            <p className="text-sm text-[#9A9489] mt-2 leading-relaxed">{service.desc}</p>
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/[0.06]">
+              <span className="font-mono text-2xl text-[#E8C77E]">{formatCOP(service.price)}</span>
+              <span className="inline-flex items-center gap-2 text-sm text-[#C9A86A] group-hover:gap-3 transition-all">
+                Reservar <Icon name="ArrowRight" size={16} />
+              </span>
+            </div>
+          </button>
         </div>
-      </div>
+      </section>
+
+      <section className="py-16 sm:py-24 border-t border-white/[0.06]">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-2xl p-8 sm:p-10" style={{
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8C77E] to-[#8B6F3F] flex items-center justify-center mb-6">
+                <span className="font-display italic text-2xl text-[#1A1408]">FM</span>
+              </div>
+              <h3 className="text-2xl font-medium text-[#F5F1E8]">Fernando Mendoza</h3>
+              <p className="text-sm text-[#C9A86A] mt-1">Barbero</p>
+              <p className="text-sm text-[#9A9489] mt-4 leading-relaxed">
+                Cada corte con dedicación y atención al detalle. Pásate por la barbería o reserva tu cita para no esperar.
+              </p>
+              <a
+                href={CONTACT_INFO.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-2 text-sm text-[#25D366] hover:text-[#2eec73] transition-colors"
+              >
+                <Icon name="MessageCircle" size={14} />
+                Escríbeme por WhatsApp
+              </a>
+            </div>
+
+            <div className="rounded-2xl p-8 sm:p-10" style={{
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{
+                background: 'rgba(201, 168, 106, 0.1)',
+                border: '1px solid rgba(201, 168, 106, 0.15)',
+              }}>
+                <Icon name="Clock" size={20} className="text-[#C9A86A]" />
+              </div>
+              <h3 className="text-2xl font-medium text-[#F5F1E8]">Horario</h3>
+              <div className="mt-4 space-y-3">
+                <ScheduleRow day="Lunes" hours="Cerrado" closed />
+                <ScheduleRow day="Martes – Sábado" hours="8:30 AM – 6:00 PM" />
+                <ScheduleRow day="Domingo" hours="8:30 AM – 3:00 PM" />
+              </div>
+              <div className="mt-6 pt-6 border-t border-white/[0.06]">
+                <div className="flex items-center gap-2 text-sm text-[#9A9489]">
+                  <Icon name="MapPin" size={14} className="text-[#6A655C] shrink-0" />
+                  Tuchín, Córdoba · Sector San Pedro
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#9A9489] mt-2">
+                  <Icon name="Phone" size={14} className="text-[#6A655C] shrink-0" />
+                  {CONTACT_INFO.phone}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-24 border-t border-white/[0.06]">
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 text-center">
+          <h2 className="font-display text-4xl sm:text-5xl text-[#F5F1E8]">
+            Listo para tu <span className="italic text-gold-gradient">corte</span>?
+          </h2>
+          <p className="mt-4 text-[#9A9489] text-lg">
+            Reserva tu cita y llega a tu hora. Sin espera.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => navigate('/reservar')}
+              className="inline-flex items-center gap-2.5 bg-[#C9A86A] text-[#1A1408] text-sm font-semibold tracking-wider uppercase px-8 py-4 rounded-full hover:bg-[#E8C77E] transition-all hover:shadow-lg hover:shadow-[#C9A86A]/20"
+            >
+              <Icon name="Calendar" size={16} />
+              Reservar Ahora
+            </button>
+            <a
+              href={`tel:${CONTACT_INFO.phone}`}
+              className="inline-flex items-center gap-2.5 text-sm font-medium px-8 py-4 rounded-full transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#B5AFA5',
+              }}
+            >
+              <Icon name="Phone" size={16} />
+              Llamar
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-function HomeRow({ label, value }) {
+function ScheduleRow({ day, hours, closed }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.2em' }}>{label.toUpperCase()}</span>
-      <span className="text-sm text-right" style={{ color: '#F1ECDE' }}>{value}</span>
-    </div>
-  );
-}
-
-function Pillar({ n, t, d }) {
-  return (
-    <div>
-      <div className="font-roman text-3xl text-gold mb-3" style={{ letterSpacing: '0.1em' }}>{n}</div>
-      <h4 className="font-display text-xl mb-2" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{t}</h4>
-      <p className="text-xs" style={{ color: '#948A78' }}>{d}</p>
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm text-[#B5AFA5]">{day}</span>
+      <span className={`text-sm ${closed ? 'text-[#6A655C]' : 'text-[#E8C77E]'}`}>{hours}</span>
     </div>
   );
 }

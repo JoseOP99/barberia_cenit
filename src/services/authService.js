@@ -71,25 +71,21 @@ export const authService = {
     }
   },
 
-  // Obtener usuario actual
   async getCurrentUser() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) handleError(error, 'getCurrentUser');
-      return user;
-    } catch (err) {
-      handleError(err, 'getCurrentUser');
+      const { data: { user } } = await supabase.auth.getUser();
+      return user || null;
+    } catch {
+      return null;
     }
   },
 
-  // Obtener sesión actual
   async getSession() {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) handleError(error, 'getSession');
-      return session;
-    } catch (err) {
-      handleError(err, 'getSession');
+      const { data: { session } } = await supabase.auth.getSession();
+      return session || null;
+    } catch {
+      return null;
     }
   },
 
@@ -183,11 +179,11 @@ export const authService = {
     }
   },
 
-  // Escuchar cambios de autenticación
   onAuthStateChange(callback) {
-    return supabase.auth.onAuthStateChange((event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session);
     });
+    return data?.subscription;
   }
 };
 

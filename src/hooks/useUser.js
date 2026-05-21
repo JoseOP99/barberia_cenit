@@ -33,10 +33,11 @@ export function useUser() {
             setIsAdmin(false);
           }
         }
-      } catch (err) {
-        console.error('Error initializing user:', err);
+      } catch {
         if (isMounted) {
-          setError(err.message);
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
         }
       } finally {
         if (isMounted) {

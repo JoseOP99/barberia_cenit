@@ -1,183 +1,116 @@
 import React, { useState, useMemo } from 'react';
-import { Icon, Sunburst, Corners, ROMAN } from '../components/Shared';
-import { CENIT_DATA, formatCOP } from '../data/cenitData';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Icon } from '../components/Shared';
+import { CENIT_DATA, OPERATING_HOURS, CONTACT_INFO, formatCOP } from '../data/cenitData';
+
+const STEPS = ['Fecha y Hora', 'Tus Datos'];
 
 export default function Booking() {
-  const location = useLocation();
-  const preselectService = location.state?.preselectService;
-  const STEPS = ["Servicio", "Maestro", "Día y Hora", "Confirmación"];
+  const service = CENIT_DATA.services[0];
   const [step, setStep] = useState(0);
-  const [service, setService] = useState(preselectService ? CENIT_DATA.services.find(s => s.id === preselectService) : null);
-  const [barber, setBarber] = useState(null);
   const [date, setDate] = useState(null);
   const [time, setTime] = useState(null);
-  const [contact, setContact] = useState({ name: "", phone: "", email: "" });
+  const [contact, setContact] = useState({ name: '', phone: '' });
   const [submitted, setSubmitted] = useState(false);
 
-  const canNext = [service, barber, (date && time), (contact.name && contact.phone && contact.email)][step];
+  const canNext = [(date && time), (contact.name && contact.phone)][step];
+
+  const goNext = () => {
+    if (step === 0 && canNext) setStep(1);
+    if (step === 1 && canNext) setSubmitted(true);
+  };
+
+  const reset = () => {
+    setStep(0);
+    setSubmitted(false);
+    setDate(null);
+    setTime(null);
+    setContact({ name: '', phone: '' });
+  };
 
   return (
-    <div className="p-8 lg:p-12 fade-up">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Sunburst size={22}/>
-            <span className="font-roman text-[11px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>RESERVA · REGISTRO</span>
-          </div>
-          <h1 className="font-display text-5xl lg:text-6xl" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>
-            Agenda tu <span className="text-gold">cumbre</span>.
+    <div className="animate-in">
+      <div className="max-w-3xl mx-auto px-5 sm:px-8 py-10 sm:py-16">
+        <div className="mb-8">
+          <span className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A]">Reservar cita</span>
+          <h1 className="font-display text-4xl sm:text-5xl text-[#F5F1E8] mt-2">
+            Agenda tu <span className="italic text-gold-gradient">corte</span>
           </h1>
+          <p className="text-sm text-[#9A9489] mt-2">Con Fernando Mendoza · {service.name} · {formatCOP(service.price)}</p>
         </div>
-        <div className="hidden lg:block text-right">
-          <div className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.3em' }}>PASO ACTUAL</div>
-          <div className="font-roman text-4xl text-gold">{ROMAN[step]}</div>
-          <div className="font-mono text-[10px]" style={{ color: '#5A5347' }}>DE {ROMAN[STEPS.length - 1]}</div>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-between mb-12 gap-2 max-w-3xl">
-        {STEPS.map((s, i) => (
-          <React.Fragment key={i}>
-            <button onClick={() => i < step && setStep(i)} disabled={i > step}
-              className="flex flex-col items-center gap-2 group">
-              <span className={`pip ${i === step ? 'active' : i < step ? 'done' : ''}`}>
-                {i < step ? <Icon name="Check" size={14}/> : ROMAN[i]}
-              </span>
-              <span className={`font-roman text-[9px] tracking-[0.2em] uppercase transition-colors
-                ${i === step ? 'text-[#E8C77E]' : i < step ? 'text-[#C9A86A]' : 'text-[#5A5347]'}`}>{s}</span>
-            </button>
-            {i < STEPS.length - 1 && (
-              <span className="flex-1 h-px" style={{ background: i < step ? '#C9A86A' : '#2A2530' }}/>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-
-      <div className="corner-deco frame-double p-6 lg:p-10 relative min-h-[520px]">
-        <Corners/>
-        {submitted ? (
-          <ReservaSuccess service={service} barber={barber} date={date} time={time} contact={contact}
-            onReset={() => { setStep(0); setSubmitted(false); setService(null); setBarber(null); setDate(null); setTime(null); setContact({name:'',phone:'',email:''}); }}/>
-        ) : (
-          <>
-            {step === 0 && <StepService selected={service} onSelect={setService}/>}
-            {step === 1 && <StepBarber selected={barber} onSelect={setBarber}/>}
-            {step === 2 && <StepDateTime date={date} time={time} onDate={setDate} onTime={setTime}/>}
-            {step === 3 && <StepContact contact={contact} onChange={setContact} summary={{ service, barber, date, time }}/>}
-
-            <div className="mt-10 pt-6 flex items-center justify-between border-t" style={{ borderColor: '#2A2530' }}>
-              <button className="btn-line inline-flex items-center gap-2"
-                disabled={step === 0}
-                onClick={() => setStep(Math.max(0, step - 1))}>
-                <Icon name="ArrowLeft" size={12}/> Anterior
-              </button>
-              {step < 3 ? (
-                <button className="btn-gold inline-flex items-center gap-2"
-                  disabled={!canNext}
-                  onClick={() => canNext && setStep(step + 1)}>
-                  Continuar · {ROMAN[step + 1]} <Icon name="ArrowRight" size={12}/>
+        {!submitted && (
+          <div className="flex items-center gap-1 mb-8">
+            {STEPS.map((s, i) => (
+              <React.Fragment key={i}>
+                <button
+                  onClick={() => i < step && setStep(i)}
+                  disabled={i > step}
+                  className="flex items-center gap-2 shrink-0"
+                >
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                    i === step
+                      ? 'bg-[#C9A86A] text-[#1A1408]'
+                      : i < step
+                        ? 'bg-[#C9A86A]/20 text-[#C9A86A]'
+                        : 'bg-white/[0.05] text-[#6A655C]'
+                  }`}>
+                    {i < step ? <Icon name="Check" size={14} /> : i + 1}
+                  </span>
+                  <span className={`text-sm hidden sm:inline transition-colors ${
+                    i === step ? 'text-[#F5F1E8] font-medium' : i < step ? 'text-[#9A9489]' : 'text-[#6A655C]'
+                  }`}>{s}</span>
                 </button>
-              ) : (
-                <button className="btn-gold inline-flex items-center gap-2"
-                  disabled={!canNext}
-                  onClick={() => canNext && setSubmitted(true)}>
-                  Confirmar Reserva <Icon name="Check" size={12}/>
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StepService({ selected, onSelect }) {
-  return (
-    <div className="fade-up">
-      <StepHead n="I" title="Elige tu ritual" sub="Cada servicio reserva su tiempo exacto en la silla."/>
-      <div className="grid md:grid-cols-2 gap-4">
-        {CENIT_DATA.services.map((s, i) => {
-          const active = selected?.id === s.id;
-          return (
-            <button key={s.id} onClick={() => onSelect(s)}
-              className={`corner-deco text-left p-6 border transition-all relative
-                ${active ? 'bg-[#1A171C]' : 'hover:bg-[#131115]'}`}
-              style={{ borderColor: active ? '#C9A86A' : '#2A2530' }}>
-              <Corners/>
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <span className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.3em' }}>№ {String(i+1).padStart(2,'0')}</span>
-                  <h4 className="font-display text-2xl mt-1" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{s.name}</h4>
-                  <div className="font-roman text-[10px] mt-1" style={{ color: '#C9A86A', letterSpacing: '0.18em' }}>{s.subtitle.toUpperCase()}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-mono text-base" style={{ color: '#E8C77E' }}>{formatCOP(s.price)}</div>
-                  <div className="font-mono text-[10px] mt-1" style={{ color: '#5A5347' }}>{s.duration} MIN</div>
-                </div>
-              </div>
-              <p className="text-xs mt-4" style={{ color: '#948A78' }}>{s.desc}</p>
-              {active && (
-                <div className="mt-4 inline-flex items-center gap-2 font-roman text-[10px]" style={{ color: '#E8C77E', letterSpacing: '0.2em' }}>
-                  <Icon name="Check" size={12}/> SELECCIONADO
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StepBarber({ selected, onSelect }) {
-  return (
-    <div className="fade-up">
-      <StepHead n="II" title="Elige tu maestro" sub="Cada barbero tiene su firma. Elige el que conecta con tu estilo."/>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {CENIT_DATA.barbers.map((b, idx) => {
-          const active = selected?.id === b.id;
-          return (
-            <button key={b.id} onClick={() => onSelect(b)}
-              className={`corner-deco text-left border overflow-hidden transition-all relative
-                ${active ? '' : 'hover:bg-[#131115]'}`}
-              style={{ borderColor: active ? '#C9A86A' : '#2A2530', background: active ? '#1A171C' : 'transparent' }}>
-              <Corners/>
-              <div className="aspect-[3/4] relative" style={{
-                background: `linear-gradient(165deg, ${['#1F1B16','#231911','#1A1612','#241D14'][idx]} 0%, #07060A 100%)`
-              }}>
-                <div className="absolute inset-0 flex items-center justify-center"
-                     style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,106,.06), transparent 60%)' }}>
-                  <div className="font-display italic text-[140px] leading-none" style={{ color: 'rgba(201,168,106,.12)' }}>
-                    {b.name.split(' ').map(w => w[0]).join('')}
-                  </div>
-                </div>
-                <div className="absolute top-3 left-3 font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>
-                  {ROMAN[idx]}
-                </div>
-                {active && (
-                  <div className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center bg-gold">
-                    <Icon name="Check" size={14} className="text-black"/>
-                  </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-px min-w-[32px] mx-3 ${i < step ? 'bg-[#C9A86A]/40' : 'bg-white/[0.06]'}`} />
                 )}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
+        <div className="rounded-2xl p-5 sm:p-8" style={{
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          {submitted ? (
+            <SuccessView service={service} date={date} time={time} contact={contact} onReset={reset} />
+          ) : (
+            <>
+              {step === 0 && <DateTimeStep date={date} time={time} onDate={setDate} onTime={setTime} />}
+              {step === 1 && <ContactStep contact={contact} onChange={setContact} summary={{ service, date, time }} />}
+
+              <div className="mt-8 pt-6 flex items-center justify-between border-t border-white/[0.06]">
+                <button
+                  onClick={() => step > 0 && setStep(step - 1)}
+                  disabled={step === 0}
+                  className="inline-flex items-center gap-2 text-sm text-[#9A9489] hover:text-[#F5F1E8] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Icon name="ArrowLeft" size={14} /> Anterior
+                </button>
+                <button
+                  onClick={goNext}
+                  disabled={!canNext}
+                  className="inline-flex items-center gap-2 bg-[#C9A86A] text-[#1A1408] text-sm font-semibold tracking-wider uppercase px-6 py-3 rounded-full hover:bg-[#E8C77E] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  {step === 1 ? 'Confirmar Reserva' : 'Continuar'}
+                  <Icon name={step === 1 ? 'Check' : 'ArrowRight'} size={14} />
+                </button>
               </div>
-              <div className="p-4">
-                <div className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.2em' }}>{b.role.toUpperCase()}</div>
-                <h4 className="font-display text-lg mt-1" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{b.name}</h4>
-                <div className="font-mono text-[10px] mt-2" style={{ color: '#5A5347' }}>{String(b.years).padStart(2,'0')} AÑOS · {b.signature.toUpperCase()}</div>
-              </div>
-            </button>
-          );
-        })}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StepDateTime({ date, time, onDate, onTime }) {
-  const [month, setMonth] = useState(() => new Date(2026, 4, 1));
-  const today = new Date(2026, 4, 20);
+function DateTimeStep({ date, time, onDate, onTime }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
   const days = useMemo(() => {
     const first = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -187,78 +120,155 @@ function StepDateTime({ date, time, onDate, onTime }) {
     for (let i = 0; i < startDay; i++) out.push(null);
     for (let d = 1; d <= last.getDate(); d++) {
       const dt = new Date(month.getFullYear(), month.getMonth(), d);
-      const isPast = dt < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const isSunday = dt.getDay() === 0;
-      out.push({ d, dt, disabled: isPast || isSunday, today: dt.toDateString() === today.toDateString() });
+      const isPast = dt < today;
+      const dayName = dayNames[dt.getDay()];
+      const isClosed = !OPERATING_HOURS[dayName];
+      out.push({ d, dt, disabled: isPast || isClosed, today: dt.toDateString() === today.toDateString() });
     }
     return out;
   }, [month]);
 
-  const slots = ["09:00","09:30","10:00","10:30","11:00","11:30",
-                 "12:00","12:30","14:00","14:30","15:00","15:30",
-                 "16:00","16:30","17:00","17:30","18:00","18:30"];
-  const unavailable = ["10:00","12:30","15:30","17:00"];
+  const getSlots = () => {
+    if (!date) return [];
+    const dayName = dayNames[date.getDay()];
+    const hours = OPERATING_HOURS[dayName];
+    if (!hours) return [];
+
+    const [openH, openM] = hours.open.split(':').map(Number);
+    const [closeH, closeM] = hours.close.split(':').map(Number);
+    const slots = [];
+    let h = openH, m = openM;
+    while (h < closeH || (h === closeH && m < closeM)) {
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+      m += 60;
+      if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
+    }
+    return slots;
+  };
+
+  const slots = getSlots();
 
   return (
-    <div className="fade-up">
-      <StepHead n="III" title="Día y hora" sub="Domingos cerrados. Selecciona primero el día."/>
-      <div className="grid lg:grid-cols-5 gap-8">
+    <div className="animate-in">
+      <div className="mb-6">
+        <h3 className="text-xl sm:text-2xl font-medium text-[#F5F1E8]">Elige fecha y hora</h3>
+        <p className="text-sm text-[#9A9489] mt-1">Lunes cerrado. Domingos hasta las 3:00 PM.</p>
+      </div>
+
+      <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
-          <div className="frame-thin p-6">
-            <div className="flex items-center justify-between mb-5">
+          <div className="rounded-xl p-4 sm:p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between mb-4">
               <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-                className="w-8 h-8 border flex items-center justify-center hover:border-[#C9A86A] transition-colors"
-                style={{ borderColor: '#3A3340' }}>
-                <Icon name="ChevronLeft" size={14}/>
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-[#9A9489] hover:text-[#E8C77E] transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                <Icon name="ChevronLeft" size={16} />
               </button>
-              <div className="text-center">
-                <div className="font-display text-xl capitalize" style={{ color: '#E8C77E', fontStyle: 'italic' }}>
-                  {month.toLocaleDateString('es-CO', { month: 'long' })}
-                </div>
-                <div className="font-mono text-[10px]" style={{ color: '#8B6F3F' }}>MMXXVI</div>
-              </div>
+              <span className="font-display text-xl text-[#F5F1E8] capitalize">
+                {month.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+              </span>
               <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-                className="w-8 h-8 border flex items-center justify-center hover:border-[#C9A86A]"
-                style={{ borderColor: '#3A3340' }}>
-                <Icon name="ChevronRight" size={14}/>
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-[#9A9489] hover:text-[#E8C77E] transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                <Icon name="ChevronRight" size={16} />
               </button>
             </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {["L","M","X","J","V","S","D"].map(d => (
-                <div key={d} className="font-roman text-[10px] text-center py-2" style={{ color: '#5A5347', letterSpacing: '0.2em' }}>{d}</div>
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {['L','M','X','J','V','S','D'].map(d => (
+                <div key={d} className="text-center py-2 text-[11px] font-medium text-[#6A655C]">{d}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {days.map((day, i) => {
-                if (!day) return <div key={i}/>;
+                if (!day) return <div key={i} />;
                 const active = date && day.dt.toDateString() === date.toDateString();
                 return (
-                  <button key={i}
+                  <button
+                    key={i}
                     onClick={() => !day.disabled && onDate(day.dt)}
                     disabled={day.disabled}
-                    className={`cal-day ${day.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${day.today ? 'today' : ''}`}>
-                    {String(day.d).padStart(2,'0')}
+                    className={`cal-day ${day.disabled ? 'disabled' : ''} ${active ? 'active' : ''} ${day.today ? 'today' : ''}`}
+                  >
+                    {day.d}
                   </button>
                 );
               })}
             </div>
           </div>
         </div>
+
         <div className="lg:col-span-2">
-          <div className="font-roman text-[10px] mb-3" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>HORARIOS DISPONIBLES</div>
-          <div className="font-mono text-xs mb-5" style={{ color: '#948A78' }}>
-            {date ? date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase() : '— SELECCIONA UNA FECHA —'}
-          </div>
-          <div className="grid grid-cols-3 gap-2" style={{ opacity: date ? 1 : .35, pointerEvents: date ? 'auto' : 'none' }}>
-            {slots.map(s => {
-              const isUn = unavailable.includes(s);
-              return (
-                <button key={s}
-                  className={`slot ${time === s ? 'active' : ''} ${isUn ? 'disabled' : ''}`}
-                  onClick={() => !isUn && onTime(s)}>{s}</button>
-              );
-            })}
+          <h4 className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A] mb-2">Horarios</h4>
+          {date ? (
+            <>
+              <p className="text-sm text-[#9A9489] mb-4">
+                {date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {slots.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => onTime(s)}
+                    className={`slot rounded-lg font-mono ${time === s ? 'active' : ''}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-[#6A655C]">Selecciona una fecha</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactStep({ contact, onChange, summary }) {
+  return (
+    <div className="animate-in">
+      <div className="mb-6">
+        <h3 className="text-xl sm:text-2xl font-medium text-[#F5F1E8]">Tus datos</h3>
+        <p className="text-sm text-[#9A9489] mt-1">Para confirmar tu reserva.</p>
+      </div>
+
+      <div className="space-y-5 mb-8">
+        <div>
+          <label className="block text-[10px] tracking-widest uppercase text-[#6A655C] mb-2">Nombre</label>
+          <input
+            type="text"
+            value={contact.name}
+            onChange={e => onChange({ ...contact, name: e.target.value })}
+            placeholder="Tu nombre"
+            className="w-full bg-transparent rounded-xl px-4 py-3.5 text-sm text-[#F5F1E8] placeholder-[#6A655C] outline-none focus:border-[#C9A86A] transition-colors"
+            style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] tracking-widest uppercase text-[#6A655C] mb-2">Teléfono / WhatsApp</label>
+          <input
+            type="tel"
+            value={contact.phone}
+            onChange={e => onChange({ ...contact, phone: e.target.value })}
+            placeholder="+57 300 000 0000"
+            className="w-full bg-transparent rounded-xl px-4 py-3.5 text-sm text-[#F5F1E8] placeholder-[#6A655C] outline-none focus:border-[#C9A86A] transition-colors"
+            style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <h4 className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A] mb-4">Resumen</h4>
+        <div className="space-y-3">
+          <SummaryRow label="Servicio" value={summary.service.name} />
+          <SummaryRow label="Barbero" value="Fernando Mendoza" />
+          <SummaryRow label="Fecha" value={summary.date?.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })} />
+          <SummaryRow label="Hora" value={summary.time} />
+          <SummaryRow label="Duración" value={`${summary.service.duration} min`} />
+          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
+            <span className="text-sm text-[#9A9489]">Total</span>
+            <span className="font-mono text-lg text-[#E8C77E]">{formatCOP(summary.service.price)}</span>
           </div>
         </div>
       </div>
@@ -266,116 +276,67 @@ function StepDateTime({ date, time, onDate, onTime }) {
   );
 }
 
-function StepContact({ contact, onChange, summary }) {
-  const total = summary.service?.price || 0;
+function SummaryRow({ label, value }) {
   return (
-    <div className="fade-up">
-      <StepHead n="IV" title="Datos de confirmación" sub="Te enviamos detalles al instante."/>
-      <div className="grid lg:grid-cols-5 gap-10">
-        <div className="lg:col-span-3 space-y-8">
-          <Field label="Nombre completo" value={contact.name}
-                 onChange={v => onChange({ ...contact, name: v })} placeholder="Javier Montes Restrepo"/>
-          <Field label="Teléfono" value={contact.phone}
-                 onChange={v => onChange({ ...contact, phone: v })} placeholder="+57 300 000 0000"/>
-          <Field label="Correo electrónico" value={contact.email} type="email"
-                 onChange={v => onChange({ ...contact, email: v })} placeholder="javier@ejemplo.com"/>
-          <div className="flex items-start gap-3 pt-2">
-            <span className="w-4 h-4 inline-flex items-center justify-center mt-1 bg-gold">
-              <Icon name="Check" size={10} className="text-black"/>
-            </span>
-            <p className="text-xs" style={{ color: '#948A78' }}>
-              Acepto la política de cancelación: hasta 2 horas antes sin costo.
-            </p>
-          </div>
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-[#6A655C]">{label}</span>
+      <span className="text-sm text-[#F5F1E8] font-medium">{value}</span>
+    </div>
+  );
+}
+
+function SuccessView({ service, date, time, contact, onReset }) {
+  return (
+    <div className="animate-in text-center py-6">
+      <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{
+        background: 'rgba(127, 168, 106, 0.1)',
+        border: '1px solid rgba(127, 168, 106, 0.3)',
+      }}>
+        <Icon name="Check" size={28} className="text-[#7FA86A]" />
+      </div>
+
+      <span className="text-xs font-semibold tracking-widest uppercase text-[#C9A86A]">Reserva confirmada</span>
+      <h2 className="font-display text-3xl sm:text-4xl text-[#F5F1E8] mt-2">
+        Te esperamos, <span className="italic text-gold-gradient">{contact.name.split(' ')[0]}</span>
+      </h2>
+
+      <div className="mt-8 inline-flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="px-5 py-4 text-center" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mb-1">Servicio</div>
+          <div className="text-sm font-medium text-[#F5F1E8]">{service.name}</div>
         </div>
-        <div className="lg:col-span-2">
-          <div className="ticket">
-            <div className="font-roman text-[10px] mb-4" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>BOLETO DE RESERVA</div>
-            <SumRow label="Servicio" value={summary.service?.name || '—'}/>
-            <SumRow label="Maestro"  value={summary.barber?.name || '—'}/>
-            <SumRow label="Fecha"    value={summary.date ? summary.date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'}/>
-            <SumRow label="Hora"     value={summary.time || '—'}/>
-            <SumRow label="Duración" value={summary.service ? `${summary.service.duration} min` : '—'}/>
-            <div className="diamond-divider my-5">◆</div>
-            <div className="flex items-baseline justify-between">
-              <span className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>TOTAL</span>
-              <span className="font-display text-3xl text-gold">{formatCOP(total)}</span>
-            </div>
-            <div className="font-mono text-[10px] mt-2 text-right" style={{ color: '#5A5347' }}>PAGO EN SITIO</div>
-          </div>
+        <div className="px-5 py-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mb-1">Fecha</div>
+          <div className="text-sm font-medium text-[#F5F1E8]">{date?.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</div>
+        </div>
+        <div className="px-5 py-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="text-[10px] tracking-widest uppercase text-[#6A655C] mb-1">Hora</div>
+          <div className="text-sm font-medium text-[#F5F1E8]">{time}</div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function StepHead({ n, title, sub }) {
-  return (
-    <div className="mb-8">
-      <div className="font-roman text-3xl text-gold mb-2" style={{ letterSpacing: '0.2em' }}>{n}</div>
-      <h3 className="font-display text-3xl lg:text-4xl mb-2" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{title}</h3>
-      <p className="font-mono text-xs" style={{ color: '#948A78' }}>{sub}</p>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, placeholder, type = "text" }) {
-  return (
-    <div>
-      <label className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>{label.toUpperCase()}</label>
-      <input className="input-line mt-1 w-full text-white bg-transparent border-b border-[#3A3340] pb-2 outline-none focus:border-[#C9A86A] transition-colors" type={type} placeholder={placeholder}
-             value={value} onChange={e => onChange(e.target.value)}/>
-    </div>
-  );
-}
-
-function SumRow({ label, value }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 py-2.5 border-b" style={{ borderColor: '#2A2530' }}>
-      <span className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.25em' }}>{label.toUpperCase()}</span>
-      <span className="text-sm" style={{ color: '#F1ECDE' }}>{value}</span>
-    </div>
-  );
-}
-
-function ReservaSuccess({ service, barber, date, time, contact, onReset }) {
-  return (
-    <div className="text-center py-10 fade-up">
-      <div className="flex justify-center mb-6">
-        <Sunburst size={56}/>
-      </div>
-      <span className="font-roman text-[11px] text-gold" style={{ letterSpacing: '0.3em' }}>RESERVA CONFIRMADA</span>
-      <h3 className="font-display text-4xl lg:text-5xl mt-4 mb-4" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>
-        Tu cumbre te espera,<br/><span className="text-gold">{contact.name.split(' ')[0] || 'Caballero'}.</span>
-      </h3>
-      <p className="font-mono text-xs max-w-md mx-auto" style={{ color: '#948A78' }}>
-        DETALLES ENVIADOS A {contact.email.toUpperCase()}<br/>
-        {date?.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()} · {time}
+      <p className="mt-8 text-sm text-[#9A9489]">
+        Fernando te espera en la barbería. Si necesitas cambiar la hora, escríbele:
       </p>
-      <div className="mt-10 ticket inline-flex flex-wrap items-center gap-8 px-8 text-left">
-        <SuccCol label="Servicio" value={service?.name}/>
-        <span style={{ color: '#3A3340' }}>◆</span>
-        <SuccCol label="Maestro" value={barber?.name}/>
-        <span style={{ color: '#3A3340' }}>◆</span>
-        <SuccCol label="Hora" value={time}/>
-      </div>
-      <div className="mt-10 flex flex-wrap justify-center gap-3">
-        <button className="btn-line inline-flex items-center gap-2" onClick={onReset}>
-          <Icon name="Plus" size={12}/> Nueva cita
-        </button>
-        <button className="btn-gold inline-flex items-center gap-2">
-          <Icon name="Calendar" size={12}/> Añadir al calendario
-        </button>
-      </div>
-    </div>
-  );
-}
 
-function SuccCol({ label, value }) {
-  return (
-    <div>
-      <div className="font-roman text-[10px]" style={{ color: '#8B6F3F', letterSpacing: '0.25em' }}>{label.toUpperCase()}</div>
-      <div className="font-display text-xl" style={{ color: '#E8C77E', fontStyle: 'italic' }}>{value}</div>
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
+        <a
+          href={CONTACT_INFO.whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-full transition-colors"
+          style={{ background: 'rgba(37, 211, 102, 0.1)', border: '1px solid rgba(37, 211, 102, 0.25)', color: '#25D366' }}
+        >
+          <Icon name="MessageCircle" size={16} /> WhatsApp
+        </a>
+        <button
+          onClick={onReset}
+          className="inline-flex items-center gap-2 text-sm text-[#9A9489] hover:text-[#F5F1E8] px-5 py-2.5 rounded-full transition-colors"
+          style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <Icon name="Plus" size={14} /> Nueva cita
+        </button>
+      </div>
     </div>
   );
 }
