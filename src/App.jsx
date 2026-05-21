@@ -277,20 +277,29 @@ function Layout({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/reservar" element={<ProtectedBookingRoute />} />
-            <Route path="/booking" element={<Navigate to="/reservar" replace />} />
-            <Route path="/tienda" element={<Shop />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/reset-password" element={<Auth />} />
-            <Route path="/admin/*" element={<ProtectedAdminRoute />} />
-          </Routes>
-        </Layout>
-      </AuthProvider>
-    </BrowserRouter>
+    <div className="min-h-screen text-[#F5F1E8] flex flex-col relative font-sans">
+      
+      {/* Fondo Animado Mesh Gradient */}
+      <div className="mesh-bg">
+        <div className="mesh-orb orb-1"></div>
+        <div className="mesh-orb orb-2"></div>
+      </div>
+
+      <BrowserRouter>
+        <AuthProvider>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/reservar" element={<ProtectedBookingRoute />} />
+              <Route path="/booking" element={<Navigate to="/reservar" replace />} />
+              <Route path="/tienda" element={<Shop />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/reset-password" element={<Auth />} />
+              <Route path="/admin/*" element={<ProtectedAdminRoute />} />
+            </Routes>
+          </Layout>
+        </AuthProvider>
+      </BrowserRouter>
+    </div>
   );
 }
