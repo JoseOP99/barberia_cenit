@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
 /* ===== Cénit · Sistema visual ===== */
 :root {
   --bg: #0A0A0A;

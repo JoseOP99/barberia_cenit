@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 15 npx vite)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(npm install @tailwindcss/vite --save-dev)",
+      "Bash(git status *)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); gh auth status 2>&1)"
+    ]
+  }
+}

@@ -1,79 +1,208 @@
 import { supabase } from './supabaseClient';
 
+const handleError = (error, context) => {
+  const errorMessage = error?.message || 'Error desconocido';
+  console.error(`[ProductsService - ${context}]:`, errorMessage);
+  throw new Error(`${context}: ${errorMessage}`);
+};
+
 export const productsService = {
-  // Obtener todos los productos
-  async getAllProducts() {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
+  // Obtener todos los productos visibles
+  async getAllProducts(filters = {}) {
+    try {
+      let query = supabase
+        .from('products')
+        .select('*')
+        .eq('visible', true)
+        .order('created_at', { ascending: false });
+
+      if (filters.collection) {
+        query = query.eq('collection', filters.collection);
+      }
+
+      const { data, error } = await query;
+      if (error) handleError(error, 'getAllProducts');
+      return data || [];
+    } catch (err) {
+      handleError(err, 'getAllProducts');
+    }
+  },
+
+  // Obtener todos los productos (incluyendo ocultos) - admin
+  async getAllProductsAdmin() {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) handleError(error, 'getAllProductsAdmin');
+      return data || [];
+    } catch (err) {
+      handleError(err, 'getAllProductsAdmin');
+    }
   },
 
   // Obtener producto por ID
   async getProductById(id) {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
-    return data;
+    try {
+      if (!id) throw new Error('Product ID es requerido');
+
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) handleError(error, 'getProductById');
+      return data;
+    } catch (err) {
+      handleError(err, 'getProductById');
+    }
   },
 
   // Crear producto (admin)
   async createProduct(product) {
-    const { data, error } = await supabase
-      .from('products')
-      .insert([product])
-      .select();
-    if (error) throw error;
-    return data[0];
+    try {
+      if (!product.name || !product.price || product.stock === undefined) {
+        throw new Error('Campos requeridos faltantes (name, price, stock)');
+      }
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{
+          ...product,
+          visible: product.visible !== false,
+          sku: product.sku || `SKU-${Date.now()}`,
+          created_at: new Date().toISOString()
+        }])
+        .select();
+
+      if (error) handleError(error, 'createProduct');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'createProduct');
+    }
   },
 
   // Actualizar producto (admin)
   async updateProduct(id, updates) {
-    const { data, error } = await supabase
-      .from('products')
-      .update(updates)
-      .eq('id', id)
-      .select();
-    if (error) throw error;
-    return data[0];
+    try {
+      if (!id) throw new Error('Product ID es requerido');
+
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) handleError(error, 'updateProduct');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'updateProduct');
+    }
   },
 
-  // Eliminar producto (admin)
+  // Eliminar producto (admin) - marcar como invisible en lugar de eliminar
   async deleteProduct(id) {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    try {
+      if (!id) throw new Error('Product ID es requerido');
+
+      const { data, error } = await supabase
+        .from('products')
+        .update({ visible: false })
+        .eq('id', id)
+        .select();
+
+      if (error) handleError(error, 'deleteProduct');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'deleteProduct');
+    }
   },
 
-  // Obtener stock disponible (restando reservas activas)
-  async getAvailableStock(productId) {
-    const { data: product, error: productError } = await supabase
-      .from('products')
-      .select('stock')
-      .eq('id', productId)
-      .single();
+  // Actualizar stock de un producto
+  async updateStock(id, quantity) {
+    try {
+      if (!id) throw new Error('Product ID es requerido');
+      if (typeof quantity !== 'number') throw new Error('Quantity debe ser un número');
 
-    if (productError) throw productError;
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          stock: quantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select();
 
-    const { data: reservations, error: reservError } = await supabase
-      .from('reservations')
-      .select('quantity', { count: 'exact' })
-      .eq('product_id', productId)
-      .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString());
+      if (error) handleError(error, 'updateStock');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'updateStock');
+    }
+  },
 
-    if (reservError) throw reservError;
+  // Obtener disponibilidad completa (stock total vs disponible)
+  async getProductAvailability(productId) {
+    try {
+      if (!productId) throw new Error('Product ID es requerido');
 
-    const reservedQty = reservations.reduce((sum, r) => sum + (r.quantity || 1), 0);
-    return product.stock - reservedQty;
+      const now = new Date().toISOString();
+
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('stock, name, price')
+        .eq('id', productId)
+        .single();
+
+      if (productError) handleError(productError, 'getProductAvailability');
+
+      const { data: reservations, error: reservError } = await supabase
+        .from('reservations')
+        .select('quantity')
+        .eq('product_id', productId)
+        .eq('status', 'pending')
+        .gt('expires_at', now);
+
+      if (reservError) handleError(reservError, 'getProductAvailability');
+
+      const reserved = (reservations || []).reduce((sum, r) => sum + (r.quantity || 1), 0);
+      const available = Math.max(0, (product?.stock || 0) - reserved);
+
+      return {
+        productId,
+        name: product?.name,
+        price: product?.price,
+        total: product?.stock || 0,
+        reserved,
+        available,
+        isAvailable: available > 0
+      };
+    } catch (err) {
+      handleError(err, 'getProductAvailability');
+    }
+  },
+
+  // Obtener colecciones únicas
+  async getCollections() {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('collection')
+        .eq('visible', true)
+        .not('collection', 'is', null);
+
+      if (error) handleError(error, 'getCollections');
+
+      const collections = [...new Set((data || []).map(p => p.collection))].filter(Boolean);
+      return collections;
+    } catch (err) {
+      handleError(err, 'getCollections');
+    }
   }
 };
 
