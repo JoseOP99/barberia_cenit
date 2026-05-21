@@ -34,3 +34,20 @@ Thumbs.db
 
 # Misc
 *.log
+
+# Claude Code local configuration (machine-specific)
+.claude/
+.agents/
+
+# Skills lock file (generated locally)
+skills-lock.json
+
+# Local secrets and credentials
+.env*.local
+*.key
+*.pem
+secrets/
+
+# Package manager lock files (optional - keep if you want to commit)
+# package-lock.json
+# yarn.lock
