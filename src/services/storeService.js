@@ -13,7 +13,7 @@ export const storeService = {
       // 1. Obtener perfil del cliente
       const { data: profileData, error: profileErr } = await supabase
         .from('profiles')
-        .select('first_name, first_lastname, phone')
+        .select('first_name, first_lastname, phone, email')
         .eq('id', userId)
         .single();
         
@@ -34,14 +34,17 @@ export const storeService = {
 
       // 3. Crear la reserva temporal
       const fullName = `${profileData.first_name || ''} ${profileData.first_lastname || ''}`.trim();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('reservations')
         .insert([{
           product_id: productId,
           user_id: userId,
-          status: 'active',
+          status: 'pending',
           client_name: fullName || 'Cliente Tienda',
-          client_phone: profileData.phone || ''
+          client_phone: profileData.phone || '',
+          client_email: profileData.email || 'correo@pendiente.com',
+          expires_at: expiresAt
         }])
         .select(`
           *,

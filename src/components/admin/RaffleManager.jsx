@@ -9,13 +9,15 @@ export default function RaffleManager() {
   
   // Formulario nuevo sorteo
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     title: '',
     prize: '',
     draw_date: '',
     start_date: '',
     end_date: '',
-    min_appointments: 1
+    min_appointments: 1,
+    ticket_digits: 6
   });
 
   useEffect(() => {
@@ -35,16 +37,49 @@ export default function RaffleManager() {
     }
   };
 
-  const handleCreate = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      await raffleService.createRaffle(form);
+      if (editingId) {
+        await raffleService.updateRaffle(editingId, form);
+      } else {
+        await raffleService.createRaffle(form);
+      }
       setShowForm(false);
-      setForm({ title: '', prize: '', draw_date: '', start_date: '', end_date: '', min_appointments: 1 });
+      setEditingId(null);
+      setForm({ title: '', prize: '', draw_date: '', start_date: '', end_date: '', min_appointments: 1, ticket_digits: 6 });
       loadRaffles();
     } catch (err) {
-      alert("Error al crear sorteo: " + err.message);
+      alert("Error al guardar sorteo: " + err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleEdit = (raffle) => {
+    setForm({
+      title: raffle.title,
+      prize: raffle.prize,
+      draw_date: raffle.draw_date,
+      start_date: raffle.start_date,
+      end_date: raffle.end_date,
+      min_appointments: raffle.min_appointments,
+      ticket_digits: raffle.ticket_digits || 6
+    });
+    setEditingId(raffle.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelRaffle = async (id) => {
+    if (!confirm('¿Estás seguro de cancelar este sorteo? No se podrán generar más tickets ni realizar el sorteo.')) return;
+    setIsProcessing(true);
+    try {
+      await raffleService.cancelRaffle(id);
+      loadRaffles();
+    } catch (err) {
+      alert("Error al cancelar sorteo: " + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -89,19 +124,27 @@ export default function RaffleManager() {
           <p className="text-sm text-[#9A9489] mt-1">Crea dinámicas para premiar a tus clientes más fieles.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setEditingId(null);
+              setForm({ title: '', prize: '', draw_date: '', start_date: '', end_date: '', min_appointments: 1, ticket_digits: 6 });
+            }
+            setShowForm(!showForm);
+          }}
           className="btn-gold px-5 py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2"
         >
           <Icon name={showForm ? 'X' : 'Plus'} size={16} />
-          {showForm ? 'Cancelar' : 'Nuevo Sorteo'}
+          {showForm ? 'Cancelar Edición' : 'Nuevo Sorteo'}
         </button>
       </div>
 
       {/* Formulario */}
       {showForm && (
         <div className="glass-panel p-6 rounded-2xl animate-in slide-in-from-top-2 border border-[#C9A86A]/20">
-          <h4 className="text-sm font-semibold tracking-widest uppercase text-[#C9A86A] mb-4">Detalles del Nuevo Sorteo</h4>
-          <form onSubmit={handleCreate} className="space-y-4">
+          <h4 className="text-sm font-semibold tracking-widest uppercase text-[#C9A86A] mb-4">
+            {editingId ? 'Editar Sorteo' : 'Detalles del Nuevo Sorteo'}
+          </h4>
+          <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Título del sorteo</label>
@@ -123,20 +166,33 @@ export default function RaffleManager() {
                 <input required type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} className="w-full bg-black/50 border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A] outline-none [color-scheme:dark]" />
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Fecha del Sorteo</label>
+                <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Fecha Estimada (o al agotar tickets)</label>
                 <input required type="date" value={form.draw_date} onChange={e => setForm({...form, draw_date: e.target.value})} className="w-full bg-black/50 border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A] outline-none [color-scheme:dark]" />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Cortes Mínimos Requeridos</label>
-              <input required type="number" min="1" value={form.min_appointments} onChange={e => setForm({...form, min_appointments: e.target.value})} className="w-full sm:w-1/3 bg-black/50 border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A] outline-none" />
-              <p className="text-xs text-[#9A9489] mt-1">Los clientes deben tener al menos esta cantidad de citas completadas en el rango de fechas para recibir un ticket.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Cortes Mínimos Requeridos</label>
+                <input required type="number" min="0" value={form.min_appointments} onChange={e => setForm({...form, min_appointments: e.target.value})} className="w-full bg-black/50 border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A] outline-none" />
+                <p className="text-xs text-[#9A9489] mt-1">Cantidad de citas para participar (0 = todos participan).</p>
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#6A655C] mb-1.5">Cifras del Ticket</label>
+                <select value={form.ticket_digits} onChange={e => setForm({...form, ticket_digits: parseInt(e.target.value)})} className="w-full bg-black/50 border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A] outline-none [color-scheme:dark]">
+                  <option value="2">2 Cifras (00 - 99)</option>
+                  <option value="3">3 Cifras (000 - 999)</option>
+                  <option value="4">4 Cifras (0000 - 9999)</option>
+                  <option value="5">5 Cifras</option>
+                  <option value="6">6 Cifras</option>
+                </select>
+                <p className="text-xs text-[#9A9489] mt-1">Formato de los números a generar.</p>
+              </div>
             </div>
 
             <div className="pt-2">
               <button type="submit" disabled={isProcessing} className="bg-[#C9A86A] text-[#1A1408] px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#E8C77E] transition disabled:opacity-50">
-                {isProcessing ? 'Guardando...' : 'Crear Sorteo'}
+                {isProcessing ? 'Guardando...' : (editingId ? 'Guardar Cambios' : 'Crear Sorteo')}
               </button>
             </div>
           </form>
@@ -162,9 +218,9 @@ export default function RaffleManager() {
                   <h5 className="text-lg font-medium text-[#F5F1E8]">{r.title}</h5>
                   <p className="text-sm text-[#C9A86A] mb-3">Premio: {r.prize}</p>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                     <div>
-                      <span className="block text-[#6A655C] uppercase tracking-wider mb-0.5">Rango de Cortes</span>
+                      <span className="block text-[#6A655C] uppercase tracking-wider mb-0.5">Rango</span>
                       <span className="text-[#9A9489]">{r.start_date} al {r.end_date}</span>
                     </div>
                     <div>
@@ -172,13 +228,33 @@ export default function RaffleManager() {
                       <span className="text-[#9A9489]">{r.min_appointments} citas</span>
                     </div>
                     <div>
-                      <span className="block text-[#6A655C] uppercase tracking-wider mb-0.5">Fecha de Sorteo</span>
+                      <span className="block text-[#6A655C] uppercase tracking-wider mb-0.5">Formato</span>
+                      <span className="text-[#9A9489]">{r.ticket_digits || 6} cifras</span>
+                    </div>
+                    <div>
+                      <span className="block text-[#6A655C] uppercase tracking-wider mb-0.5">Sorteo</span>
                       <span className="text-[#F5F1E8] font-medium">{r.draw_date}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
+                <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleEdit(r)}
+                      disabled={isProcessing}
+                      className="flex-1 px-3 py-2 bg-white/5 border border-white/10 text-xs text-[#F5F1E8] rounded-lg hover:bg-white/10 transition flex items-center justify-center"
+                    >
+                      Editar
+                    </button>
+                    <button 
+                      onClick={() => handleCancelRaffle(r.id)}
+                      disabled={isProcessing}
+                      className="flex-1 px-3 py-2 bg-red-500/10 border border-red-500/20 text-xs text-red-400 rounded-lg hover:bg-red-500/20 transition flex items-center justify-center"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                   <button 
                     onClick={() => handleGenerateTickets(r.id)}
                     disabled={isProcessing}

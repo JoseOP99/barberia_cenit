@@ -121,14 +121,14 @@ export const productsService = {
     }
   },
 
-  // Eliminar producto (admin) - marcar como invisible en lugar de eliminar
+  // Eliminar producto permanentemente (admin)
   async deleteProduct(id) {
     try {
       if (!id) throw new Error('Product ID es requerido');
 
       const { data, error } = await supabase
         .from('products')
-        .update({ visible: false })
+        .delete()
         .eq('id', id)
         .select();
 

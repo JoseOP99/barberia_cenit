@@ -52,7 +52,8 @@ export const raffleService = {
           draw_date: raffle.draw_date,
           start_date: raffle.start_date,
           end_date: raffle.end_date,
-          min_appointments: parseInt(raffle.min_appointments, 10) || 1,
+          min_appointments: isNaN(parseInt(raffle.min_appointments, 10)) ? 1 : parseInt(raffle.min_appointments, 10),
+          ticket_digits: parseInt(raffle.ticket_digits, 10) || 6,
           status: 'active'
         }])
         .select();
@@ -61,6 +62,46 @@ export const raffleService = {
       return data?.[0];
     } catch (err) {
       handleError(err, 'createRaffle');
+    }
+  },
+
+  // Editar sorteo
+  async updateRaffle(id, raffle) {
+    try {
+      const { data, error } = await supabase
+        .from('raffles')
+        .update({
+          title: raffle.title,
+          prize: raffle.prize,
+          draw_date: raffle.draw_date,
+          start_date: raffle.start_date,
+          end_date: raffle.end_date,
+          min_appointments: isNaN(parseInt(raffle.min_appointments, 10)) ? 1 : parseInt(raffle.min_appointments, 10),
+          ticket_digits: parseInt(raffle.ticket_digits, 10) || 6,
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) handleError(error, 'updateRaffle');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'updateRaffle');
+    }
+  },
+
+  // Cancelar sorteo
+  async cancelRaffle(id) {
+    try {
+      const { data, error } = await supabase
+        .from('raffles')
+        .update({ status: 'cancelled' })
+        .eq('id', id)
+        .select();
+
+      if (error) handleError(error, 'cancelRaffle');
+      return data?.[0];
+    } catch (err) {
+      handleError(err, 'cancelRaffle');
     }
   },
 
@@ -119,7 +160,7 @@ export const raffleService = {
       // 5. Verificar quiénes ya tienen ticket para NO duplicar (por el UNIQUE constraint fallaría)
       const { data: existingTickets } = await supabase
         .from('raffle_tickets')
-        .select('user_id')
+        .select('user_id, ticket_number')
         .eq('raffle_id', raffleId);
       const existingUserIds = new Set((existingTickets || []).map(t => t.user_id));
 
@@ -127,7 +168,21 @@ export const raffleService = {
       if (newEligible.length === 0) return { success: true, count: 0, message: "Todos los clientes elegibles ya tienen su ticket." };
 
       // 6. Asignar números y crear registros
-      const generateTicketNumber = () => Math.floor(100000 + Math.random() * 900000).toString(); // Número de 6 dígitos
+      const digits = parseInt(raffle.ticket_digits, 10) || 6;
+      const maxVal = Math.pow(10, digits) - 1;
+      
+      const usedNumbers = new Set((existingTickets || []).map(t => t.ticket_number));
+
+      const generateTicketNumber = () => {
+        let num;
+        let attempts = 0;
+        do {
+          num = Math.floor(Math.random() * (maxVal + 1)).toString().padStart(digits, '0');
+          attempts++;
+        } while (usedNumbers.has(num) && attempts < maxVal);
+        usedNumbers.add(num);
+        return num;
+      };
       
       const ticketsToInsert = newEligible.map(uid => ({
         raffle_id: raffleId,
@@ -174,13 +229,22 @@ export const raffleService = {
           winner_ticket_number: winningTicket.ticket_number
         })
         .eq('id', raffleId)
-        .select(`
-          *,
-          winner:winner_user_id(first_name, first_lastname)
-        `)
+        .select()
         .single();
       
       if (err2) throw err2;
+
+      // 4. Buscar el ganador manualmente para evitar errores de foreign key (si la relación falla en Supabase)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, first_lastname')
+        .eq('id', winningTicket.user_id)
+        .single();
+      
+      if (profile) {
+        updated.winner = profile;
+      }
+
       return updated;
     } catch (err) {
       handleError(err, 'drawWinner');
