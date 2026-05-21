@@ -10,7 +10,16 @@ export const storeService = {
   // Crear una reserva de producto
   async reserveProduct(productId, userId) {
     try {
-      // 1. Verificar el stock disponible actual consultando directamente la tabla products
+      // 1. Obtener perfil del cliente
+      const { data: profileData, error: profileErr } = await supabase
+        .from('profiles')
+        .select('first_name, first_lastname, phone')
+        .eq('id', userId)
+        .single();
+        
+      if (profileErr) throw new Error("No se pudo obtener el perfil del cliente.");
+
+      // 2. Verificar el stock disponible actual consultando directamente la tabla products
       const { data: productData, error: stockErr } = await supabase
         .from('products')
         .select('stock')
@@ -23,13 +32,16 @@ export const storeService = {
         throw new Error('El producto ya no se encuentra disponible (Sin stock o reservado por alguien más).');
       }
 
-      // 2. Crear la reserva temporal
+      // 3. Crear la reserva temporal
+      const fullName = `${profileData.first_name || ''} ${profileData.first_lastname || ''}`.trim();
       const { data, error } = await supabase
         .from('reservations')
         .insert([{
           product_id: productId,
           user_id: userId,
-          status: 'active'
+          status: 'active',
+          client_name: fullName || 'Cliente Tienda',
+          client_phone: profileData.phone || ''
         }])
         .select(`
           *,

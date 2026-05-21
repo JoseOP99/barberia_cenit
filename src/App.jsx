@@ -296,15 +296,15 @@ function Layout({ children }) {
                 <span>Mar-Sáb: 8:30-6:00PM | Dom: 8:30-3:00PM</span>
               </div>
               
-              <div className="flex items-center gap-1.5">
+              <a href={CONTACT_INFO.mapUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-[#E8C77E] transition-colors cursor-pointer">
                 <Icon name="MapPin" size={12} className="text-[#C9A86A]" />
                 <span>Sector San Pedro, Tuchín</span>
-              </div>
+              </a>
 
-              <div className="flex items-center gap-1.5">
+              <a href={`tel:${CONTACT_INFO.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1.5 hover:text-[#E8C77E] transition-colors cursor-pointer">
                 <Icon name="Phone" size={12} className="text-[#C9A86A]" />
                 <span>{CONTACT_INFO.phone}</span>
-              </div>
+              </a>
 
               <a href={CONTACT_INFO.whatsapp} target="_blank" rel="noopener noreferrer" 
                  className="flex items-center gap-1.5 text-[#25D366] hover:text-[#2eec73] transition-colors">

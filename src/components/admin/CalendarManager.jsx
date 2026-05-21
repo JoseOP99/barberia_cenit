@@ -14,7 +14,7 @@ const STATUS_MAP = {
 
 
 
-function AppointmentsTable({ appointments, onUpdateStatus }) {
+function AppointmentsTable({ appointments, onUpdateStatus, onDelete }) {
   if (appointments.length === 0) {
     return (
       <div className="p-8 text-center text-[#6A655C] text-sm">
@@ -79,6 +79,11 @@ function AppointmentsTable({ appointments, onUpdateStatus }) {
                       </button>
                     </>
                   )}
+                  {onDelete && (
+                    <button onClick={() => onDelete(a.id)} className="p-1.5 text-[#6A655C] hover:text-red-400 rounded hover:bg-red-500/10 transition flex items-center justify-center ml-2" title="Eliminar definitivamente">
+                      <Icon name="Trash2" size={14} />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -119,6 +124,13 @@ export function DashboardView() {
   const handleUpdateStatus = async (id, status) => {
     await appointmentsService.updateAppointment(id, { status });
     reloadTodayAppointments(); // Recargar después de actualizar
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm("¿Estás seguro de que deseas eliminar esta cita permanentemente? Esta acción no se puede deshacer.")) {
+      await appointmentsService.deleteAppointment(id);
+      reloadTodayAppointments();
+    }
   };
 
   const handleCloseDay = async (status) => {
@@ -165,9 +177,6 @@ export function DashboardView() {
             <button onClick={() => handleCloseDay('completed')} className="text-xs px-3 py-1.5 rounded-full border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition">
               Aprobar Restantes
             </button>
-            <button onClick={() => handleCloseDay('no-show')} className="text-xs px-3 py-1.5 rounded-full border border-orange-500/30 text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 transition">
-              Rechazar Restantes
-            </button>
             <div className="w-[1px] h-4 bg-white/[0.1] mx-1"></div>
             <button onClick={reloadTodayAppointments} className="text-[#9A9489] hover:text-[#C9A86A] transition" title="Actualizar">
               <Icon name="RefreshCw" size={16} />
@@ -177,7 +186,7 @@ export function DashboardView() {
         {loading ? (
           <div className="p-8 flex justify-center"><div className="w-6 h-6 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" /></div>
         ) : (
-          <AppointmentsTable appointments={citas} onUpdateStatus={handleUpdateStatus} />
+          <AppointmentsTable appointments={citas} onUpdateStatus={handleUpdateStatus} onDelete={handleDelete} />
         )}
       </div>
     </div>
@@ -214,6 +223,13 @@ export function CitasView() {
     reloadAllAppointments();
   };
 
+  const handleDelete = async (id) => {
+    if (confirm("¿Estás seguro de que deseas eliminar esta cita permanentemente? Esta acción no se puede deshacer.")) {
+      await appointmentsService.deleteAppointment(id);
+      reloadAllAppointments();
+    }
+  };
+
   return (
     <div className="animate-in">
       <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
@@ -226,7 +242,7 @@ export function CitasView() {
         {loading ? (
           <div className="p-8 flex justify-center"><div className="w-6 h-6 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" /></div>
         ) : (
-          <AppointmentsTable appointments={citas} onUpdateStatus={handleUpdateStatus} />
+          <AppointmentsTable appointments={citas} onUpdateStatus={handleUpdateStatus} onDelete={handleDelete} />
         )}
       </div>
     </div>

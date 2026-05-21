@@ -61,9 +61,13 @@ export default function InventoryManager() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('¿Seguro que deseas ocultar este producto de la tienda?')) {
-      await deleteProduct(id);
+  const handleHardDelete = async (id) => {
+    if (confirm('¿Seguro que deseas eliminar este producto permanentemente de la tienda?')) {
+      try {
+        await deleteProduct(id);
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
@@ -119,11 +123,9 @@ export default function InventoryManager() {
                       <button onClick={() => handleEdit(p)} className="p-2 text-[#9A9489] hover:text-[#C9A86A] transition-colors" title="Editar">
                         <Icon name="Edit2" size={14} />
                       </button>
-                      {p.visible && (
-                        <button onClick={() => handleDelete(p.id)} className="p-2 text-[#9A9489] hover:text-red-400 transition-colors" title="Ocultar">
-                          <Icon name="EyeOff" size={14} />
-                        </button>
-                      )}
+                      <button onClick={() => handleHardDelete(p.id)} className="p-2 text-[#9A9489] hover:text-red-400 transition-colors" title="Eliminar definitivamente">
+                        <Icon name="Trash2" size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}

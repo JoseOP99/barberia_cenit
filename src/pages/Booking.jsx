@@ -35,11 +35,17 @@ export default function Booking() {
 
   useEffect(() => {
     async function loadData() {
-      const s = await servicesService.getAllServices();
-      const b = await barbersService.getAllBarbers(false);
-      setServices(s);
-      if (s.length > 0) setSelectedServiceId(s[0].id);
-      if (b.length > 0) setBarber(b[0]);
+      try {
+        const [s, b] = await Promise.all([
+          servicesService.getAllServices(),
+          barbersService.getAllBarbers(false)
+        ]);
+        setServices(s || []);
+        if (s && s.length > 0) setSelectedServiceId(s[0].id);
+        if (b && b.length > 0) setBarber(b[0]);
+      } catch (err) {
+        console.error("Error cargando datos en Booking:", err);
+      }
     }
     loadData();
   }, []);
@@ -198,6 +204,7 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [bookedSlots, setBookedSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [isDayBlocked, setIsDayBlocked] = useState(false);
 
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -222,10 +229,14 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
     async function fetchSlots() {
       setLoadingSlots(true);
       // Usar fecha local YYYY-MM-DD para evitar desfase de zona horaria
-      const offset = date.getTimezoneOffset()
-      const localDate = new Date(date.getTime() - (offset*60*1000))
+      const offset = date.getTimezoneOffset();
+      const localDate = new Date(date.getTime() - (offset*60*1000));
       const dateStr = localDate.toISOString().split('T')[0];
+      
       const res = await appointmentsService.getAvailableSlots(dateStr, barberId);
+      
+      setIsDayBlocked(!!res?.isBlocked);
+      
       // Las horas de la base de datos vienen como "14:00:00", mapear a "14:00"
       const formattedSlots = (res?.booked || []).map(t => t.slice(0, 5));
       setBookedSlots(formattedSlots);
@@ -236,6 +247,8 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
 
   const getSlots = () => {
     if (!date) return [];
+    if (isDayBlocked) return [];
+    
     const dayName = dayNames[date.getDay()];
     const hours = OPERATING_HOURS[dayName];
     if (!hours) return [];
@@ -252,8 +265,6 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
       
       let isPastSlot = false;
       if (isToday) {
-        // "que me deje reservar de la hora actual a una hora mas pa alante apenas"
-        // Si la hora del slot es menor o igual a la hora actual, está bloqueado.
         if (h <= now.getHours()) {
           isPastSlot = true;
         }
@@ -330,6 +341,8 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
                 <div className="flex justify-center p-4">
                   <div className="w-5 h-5 border-2 border-[#C9A86A] border-t-transparent rounded-full animate-spin" />
                 </div>
+              ) : isDayBlocked ? (
+                <p className="text-sm text-red-400 p-3 bg-red-400/10 rounded-lg">El calendario está cerrado por vacaciones/permiso en esta fecha.</p>
               ) : slots.length === 0 ? (
                 <p className="text-sm text-amber-500/80 p-3 bg-amber-500/10 rounded-lg">No hay horarios disponibles en esta fecha.</p>
               ) : (

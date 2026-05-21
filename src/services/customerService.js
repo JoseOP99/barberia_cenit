@@ -53,6 +53,25 @@ export const customerService = {
     } catch (err) {
       handleError(err, 'resetStrikes');
     }
+  },
+
+  async deleteCustomer(userId) {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        if (error.code === '23503') { // Foreign key violation
+          throw new Error('No se puede eliminar el cliente porque tiene historial de citas o compras. Por favor, bloquea su acceso en su lugar.');
+        }
+        handleError(error, 'deleteCustomer');
+      }
+      return true;
+    } catch (err) {
+      handleError(err, 'deleteCustomer');
+    }
   }
 };
 

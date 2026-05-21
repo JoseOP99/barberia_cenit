@@ -64,6 +64,7 @@ export const appointmentsService = {
     try {
       if (!date) throw new Error('Date es requerido');
 
+      // 1. Obtener citas agendadas
       let query = supabase
         .from('appointments')
         .select('appointment_time')
@@ -77,8 +78,26 @@ export const appointmentsService = {
       const { data, error } = await query;
       if (error) handleError(error, 'getAvailableSlots');
 
+      // 2. Obtener bloqueos de vacaciones/permisos aplicables a esta fecha
+      // Asumimos un solo barbero general, o usamos el barberId si lo pasan
+      let blocksQuery = supabase
+        .from('schedule_blocks')
+        .select('*')
+        .lte('start_date', date)
+        .gte('end_date', date);
+
+      if (barberId) {
+        blocksQuery = blocksQuery.eq('barber_id', barberId);
+      }
+
+      const { data: blocksData, error: blocksErr } = await blocksQuery;
+      if (blocksErr) handleError(blocksErr, 'getAvailableSlots (blocks)');
+
+      // Si hay al menos un bloqueo que cubre esta fecha, devolvemos isBlocked: true
+      const isBlocked = blocksData && blocksData.length > 0;
+
       const bookedTimes = (data || []).map(a => a.appointment_time);
-      return { booked: bookedTimes, date };
+      return { booked: bookedTimes, date, isBlocked };
     } catch (err) {
       handleError(err, 'getAvailableSlots');
     }
@@ -142,6 +161,22 @@ export const appointmentsService = {
       return await this.updateAppointment(id, { status: 'cancelled' });
     } catch (err) {
       handleError(err, 'cancelAppointment');
+    }
+  },
+
+  // Eliminar cita físicamente (Hard delete)
+  async deleteAppointment(id) {
+    try {
+      if (!id) throw new Error('ID de cita es requerido');
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id);
+
+      if (error) handleError(error, 'deleteAppointment');
+      return true;
+    } catch (err) {
+      handleError(err, 'deleteAppointment');
     }
   },
 

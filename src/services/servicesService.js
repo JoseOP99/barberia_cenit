@@ -136,6 +136,28 @@ export const servicesService = {
     }
   },
 
+  // Eliminar servicio (Hard delete)
+  async deleteService(id) {
+    try {
+      if (!id) throw new Error('Service ID es requerido');
+
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        if (error.code === '23503') { // Foreign key violation
+          throw new Error('No se puede eliminar el servicio porque tiene citas asociadas. Por favor, deshabilítalo en su lugar.');
+        }
+        handleError(error, 'deleteService');
+      }
+      return true;
+    } catch (err) {
+      handleError(err, 'deleteService');
+    }
+  },
+
   // Obtener todas las categorías
   async getCategories() {
     try {

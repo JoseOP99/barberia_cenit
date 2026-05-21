@@ -35,6 +35,17 @@ export default function CustomerManager() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (confirm('¿Estás SEGURO de eliminar a este cliente permanentemente? Todo su perfil será borrado.')) {
+      try {
+        await customerService.deleteCustomer(id);
+        loadCustomers();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  };
+
   const filtered = customers.filter(c => {
     const term = search.toLowerCase();
     return (
@@ -117,8 +128,11 @@ export default function CustomerManager() {
                         <Icon name="RotateCcw" size={14} />
                       </button>
                     )}
-                    <button onClick={() => handleToggleBlock(c)} className={`p-2 transition-colors ${c.status === 'blocked' ? 'text-[#9A9489] hover:text-[#7FA86A]' : 'text-[#9A9489] hover:text-red-400'}`} title={c.status === 'blocked' ? 'Desbloquear' : 'Bloquear manualmente'}>
+                    <button onClick={() => handleToggleBlock(c)} className={`p-2 transition-colors ${c.status === 'blocked' ? 'text-[#9A9489] hover:text-[#7FA86A]' : 'text-[#9A9489] hover:text-orange-400'}`} title={c.status === 'blocked' ? 'Desbloquear' : 'Bloquear acceso'}>
                       <Icon name={c.status === 'blocked' ? 'Unlock' : 'Lock'} size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(c.id)} className="p-2 text-[#9A9489] hover:text-red-400 transition-colors" title="Eliminar permanentemente">
+                      <Icon name="Trash2" size={14} />
                     </button>
                   </td>
                 </tr>

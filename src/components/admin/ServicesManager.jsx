@@ -68,10 +68,14 @@ export default function ServicesManager() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('¿Seguro que deseas ocultar este servicio?')) {
-      await servicesService.updateServiceAvailability(id, false);
-      loadServices();
+  const handleHardDelete = async (id) => {
+    if (confirm('¿Seguro que deseas eliminar este servicio de forma permanente? Esto fallará si hay citas asociadas a él.')) {
+      try {
+        await servicesService.deleteService(id);
+        loadServices();
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
@@ -119,11 +123,9 @@ export default function ServicesManager() {
                       <button onClick={() => handleEdit(s)} className="p-2 text-[#9A9489] hover:text-[#C9A86A] transition-colors" title="Editar">
                         <Icon name="Edit2" size={14} />
                       </button>
-                      {s.available && (
-                        <button onClick={() => handleDelete(s.id)} className="p-2 text-[#9A9489] hover:text-red-400 transition-colors" title="Ocultar">
-                          <Icon name="EyeOff" size={14} />
-                        </button>
-                      )}
+                      <button onClick={() => handleHardDelete(s.id)} className="p-2 text-[#9A9489] hover:text-red-400 transition-colors" title="Eliminar definitivamente">
+                        <Icon name="Trash2" size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}

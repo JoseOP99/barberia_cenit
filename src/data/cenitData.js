@@ -36,6 +36,7 @@ export const CONTACT_INFO = {
   location: 'Tuchín, Córdoba · Sector San Pedro',
   phone: '+57 304 2740607',
   whatsapp: 'https://wa.link/s2od2z',
+  mapUrl: 'https://maps.app.goo.gl/bzBvSZ8ZaXBfxqGh8?g_st=aw',
 };
 
 export const formatCOP = (n) =>
