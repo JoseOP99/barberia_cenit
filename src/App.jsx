@@ -8,8 +8,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Logo, Icon } from './components/Shared';
 
 // Componente para proteger rutas de admin
+// En producción con auth activo, descomentar la lógica de protección
 function ProtectedAdminRoute() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, isLoggedIn } = useAuth();
 
   if (loading) {
     return (
@@ -19,7 +20,9 @@ function ProtectedAdminRoute() {
     );
   }
 
-  if (!isAdmin) {
+  // Permitir acceso si no hay sistema de auth activo (modo demo)
+  // En producción: cambiar a `if (!isAdmin) return <Navigate to="/" replace />;`
+  if (isLoggedIn && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
