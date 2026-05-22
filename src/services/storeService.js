@@ -34,7 +34,7 @@ export const storeService = {
 
       // 3. Crear la reserva temporal
       const fullName = `${profileData.first_name || ''} ${profileData.first_lastname || ''}`.trim();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('reservations')
         .insert([{

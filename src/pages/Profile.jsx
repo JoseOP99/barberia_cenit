@@ -171,7 +171,7 @@ export default function Profile() {
                     <div className="text-xs text-[#9A9489] mt-1">
                       {isActive ? (
                         <span className="text-[#E8C77E]">
-                          Expira a las: {new Date(res.expires_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          Expira: {new Date(res.expires_at).toLocaleString('es-CO', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'})}
                         </span>
                       ) : (
                         `Reservado el ${new Date(res.created_at).toLocaleDateString()}`

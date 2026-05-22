@@ -7,12 +7,76 @@ const handleError = (error, context) => {
 };
 
 export const productsService = {
+  // Subir imagenes al bucket de storage 'cenit-images' (con compresión fuerte)
+  async uploadImages(files) {
+    const urls = [];
+    
+    const compressImage = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 800; // max dimension para extrema optimización
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height && width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Comprimir a formato WebP (el más ligero) al 70% de calidad
+            canvas.toBlob((blob) => {
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: 'image/webp',
+                lastModified: Date.now()
+              }));
+            }, 'image/webp', 0.7);
+          };
+        };
+      });
+    };
+
+    for (const originalFile of files) {
+      // Intentar comprimir si es imagen (png, jpg, jpeg, webp)
+      const fileToUpload = originalFile.type.startsWith('image/') ? await compressImage(originalFile) : originalFile;
+
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.webp`;
+      const filePath = `products/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('cenit-images')
+        .upload(filePath, fileToUpload);
+        
+      if (uploadError) handleError(uploadError, 'uploadImage');
+      
+      const { data } = supabase.storage.from('cenit-images').getPublicUrl(filePath);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  },
+
   // Obtener todos los productos visibles
   async getAllProducts(filters = {}) {
     try {
       let query = supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_images(image_url)
+        `)
         .eq('visible', true)
         .order('created_at', { ascending: false });
 
@@ -48,7 +112,10 @@ export const productsService = {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_images(image_url)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) handleError(error, 'getAllProductsAdmin');
@@ -65,7 +132,10 @@ export const productsService = {
 
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_images(image_url)
+        `)
         .eq('id', id)
         .single();
 
@@ -83,18 +153,31 @@ export const productsService = {
         throw new Error('Campos requeridos faltantes (name, price, stock)');
       }
 
+      const { image_urls, ...productData } = product;
+
       const { data, error } = await supabase
         .from('products')
         .insert([{
-          ...product,
-          visible: product.visible !== false,
-          sku: product.sku || `SKU-${Date.now()}`,
+          ...productData,
+          visible: productData.visible !== false,
+          sku: productData.sku || `SKU-${Date.now()}`,
           created_at: new Date().toISOString()
         }])
         .select();
 
       if (error) handleError(error, 'createProduct');
-      return data?.[0];
+      const newProduct = data?.[0];
+
+      if (newProduct && image_urls && image_urls.length > 0) {
+        const imageInserts = image_urls.map((url, idx) => ({
+          product_id: newProduct.id,
+          image_url: url.trim(),
+          display_order: idx
+        }));
+        await supabase.from('product_images').insert(imageInserts);
+      }
+
+      return newProduct;
     } catch (err) {
       handleError(err, 'createProduct');
     }
@@ -105,16 +188,31 @@ export const productsService = {
     try {
       if (!id) throw new Error('Product ID es requerido');
 
+      const { image_urls, ...productData } = updates;
+
       const { data, error } = await supabase
         .from('products')
         .update({
-          ...updates,
+          ...productData,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select();
 
       if (error) handleError(error, 'updateProduct');
+
+      if (image_urls !== undefined) {
+        await supabase.from('product_images').delete().eq('product_id', id);
+        if (image_urls.length > 0) {
+          const imageInserts = image_urls.map((url, idx) => ({
+            product_id: id,
+            image_url: url.trim(),
+            display_order: idx
+          }));
+          await supabase.from('product_images').insert(imageInserts);
+        }
+      }
+
       return data?.[0];
     } catch (err) {
       handleError(err, 'updateProduct');

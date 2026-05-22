@@ -124,10 +124,11 @@ export const raffleService = {
       let eligibleUserIds = [];
 
       if (raffle.min_appointments === 0) {
-        // Participan TODOS los usuarios registrados
+        // Participan TODOS los usuarios registrados excepto el admin y barberos
         const { data: profiles, error: errProfiles } = await supabase
           .from('profiles')
-          .select('id');
+          .select('id')
+          .eq('role', 'customer');
         if (errProfiles) throw errProfiles;
         eligibleUserIds = (profiles || []).map(p => p.id);
       } else {
@@ -156,11 +157,12 @@ export const raffleService = {
         return { participants: [], count: 0, message: 'Ningún cliente cumple los requisitos.' };
       }
 
-      // 3. Obtener perfiles completos
+      // 3. Obtener perfiles completos (asegurando que sean solo clientes)
       const { data: profiles, error: errP } = await supabase
         .from('profiles')
         .select('id, first_name, first_lastname, phone, email')
-        .in('id', eligibleUserIds);
+        .in('id', eligibleUserIds)
+        .eq('role', 'customer');
       if (errP) throw errP;
 
       const participants = (profiles || []).map(p => ({

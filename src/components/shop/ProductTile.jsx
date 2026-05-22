@@ -19,7 +19,11 @@ export function ProductTile({ p, idx, onOpen }) {
                 }}>{p.tag}</span>
         )}
         <span className="absolute top-2 right-2 font-mono text-[10px]" style={{ color: '#5A5347' }}>№{String(idx+1).padStart(3,'0')}</span>
-        <CapVisual color={p.color_hex || '#1A1816'} accent={p.accent_hex || '#C9A86A'}/>
+        {p.product_images && p.product_images.length > 0 ? (
+          <img src={p.product_images[0].image_url} alt={p.name} className="w-full h-full object-cover mix-blend-screen opacity-90 p-2" />
+        ) : (
+          <CapVisual color={p.color_hex || '#1A1816'} accent={p.accent_hex || '#C9A86A'}/>
+        )}
       </div>
       <div>
         <div className="flex items-center justify-between mb-1">

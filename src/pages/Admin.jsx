@@ -34,7 +34,7 @@ export default function Admin() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex text-white bg-[#0A0A0A]">
+    <div className="h-screen w-full overflow-hidden flex text-white bg-[#0A0A0A]">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}

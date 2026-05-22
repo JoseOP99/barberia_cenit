@@ -73,18 +73,18 @@ export default function Shop({ onAddToCart = () => {} }) {
     : "PRODUCTOS EXCLUSIVOS · ESTILO DE VIDA · ENVÍO NACIONAL";
 
   return (
-    <div className="fade-up min-h-full flex flex-col">
-      <header className="px-6 lg:px-12 pt-8 pb-6 border-b" style={{ borderColor: '#2A2530' }}>
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+    <div className="fade-up h-[calc(100vh-80px)] flex flex-col overflow-hidden">
+      <header className="px-6 lg:px-10 py-4 border-b shrink-0" style={{ borderColor: '#2A2530' }}>
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Sunburst size={22}/>
-              <span className="font-roman text-[11px]" style={{ color: '#C9A86A', letterSpacing: '0.3em' }}>BOUTIQUE · TIENDA</span>
+            <div className="flex items-center gap-2 mb-1">
+              <Sunburst size={16}/>
+              <span className="font-roman text-[10px]" style={{ color: '#C9A86A', letterSpacing: '0.2em' }}>BOUTIQUE · TIENDA</span>
             </div>
-            <h1 className="font-display text-4xl lg:text-6xl leading-none" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>
+            <h1 className="font-display text-3xl lg:text-4xl leading-none" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>
               {activeTitle}
             </h1>
-            <p className="font-mono text-xs mt-3 max-w-md uppercase" style={{ color: '#948A78' }}>
+            <p className="font-mono text-[11px] mt-1.5 max-w-md uppercase" style={{ color: '#948A78' }}>
               {activeDesc}
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function Shop({ onAddToCart = () => {} }) {
       <div className="flex flex-1 min-h-0 relative">
         <FilterRail filters={filters} setFilters={setFilters} toggle={toggle}
                     categories={categories} colors={colors}
-                    className="hidden lg:block w-72 shrink-0 border-r p-8 overflow-y-auto" />
+                    className="hidden lg:block w-56 shrink-0 border-r p-5 overflow-y-auto" />
 
         {openFilters && (
           <>

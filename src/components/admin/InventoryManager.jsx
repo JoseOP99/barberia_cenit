@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Icon } from '../Shared';
 import { formatCOP } from '../../data/cenitData';
 import useProducts from '../../hooks/useProducts';
+import { productsService } from '../../services/productsService';
 
 const INITIAL_FORM = {
   name: '', description: '', price: '', stock: 1, collection: 'Gorra',
-  material: '', size: 'Ajustable', color_name: 'Negro', color_hex: '#1A1816', accent_hex: '#C9A86A',
-  tag: '', visible: true
+  material: '', size: '', color_name: '', color_hex: '#1A1816', accent_hex: '#C9A86A',
+  tag: '', visible: true, image_urls: ''
 };
 
 export default function InventoryManager() {
@@ -15,20 +16,24 @@ export default function InventoryManager() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   const handleEdit = (p) => {
     setEditingId(p.id);
+    setSelectedFiles([]);
     setForm({
       name: p.name, description: p.description || '', price: p.price, stock: p.stock,
       collection: p.collection || '', material: p.material || '', size: p.size || 'Ajustable', color_name: p.color_name || '',
       color_hex: p.color_hex || '#1A1816', accent_hex: p.accent_hex || '#C9A86A',
-      tag: p.tag || '', visible: p.visible
+      tag: p.tag || '', visible: p.visible,
+      image_urls: p.product_images ? p.product_images.map(img => img.image_url).join(', ') : ''
     });
     setShowForm(true);
   };
 
   const handleAddNew = () => {
     setEditingId(null);
+    setSelectedFiles([]);
     setForm(INITIAL_FORM);
     setShowForm(true);
   };
@@ -36,6 +41,7 @@ export default function InventoryManager() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
+    setSelectedFiles([]);
     setForm(INITIAL_FORM);
   };
 
@@ -43,13 +49,22 @@ export default function InventoryManager() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      let uploadedUrls = [];
+      if (selectedFiles.length > 0) {
+        uploadedUrls = await productsService.uploadImages(selectedFiles);
+      }
+
+      const existingUrls = form.image_urls ? form.image_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
+      const allUrls = [...existingUrls, ...uploadedUrls];
+
       const payload = {
         name: form.name,
         description: form.description,
         price: Number(form.price),
         stock: Number(form.stock),
         collection: form.collection,
-        visible: form.visible
+        visible: form.visible,
+        image_urls: allUrls
       };
       if (editingId) {
         await updateProduct(editingId, payload);
@@ -145,6 +160,33 @@ export default function InventoryManager() {
                 <label className="block text-xs text-[#9A9489] mb-1">Nombre *</label>
                 <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-[#9A9489] mb-1">Descripción corta</label>
+                <input value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#9A9489] mb-2">Fotos del producto</label>
+                
+                {form.image_urls && (
+                  <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                    {form.image_urls.split(',').filter(Boolean).map((url, i) => (
+                      <div key={i} className="relative w-12 h-12 shrink-0 border border-white/[0.08] rounded bg-[#1A1816] overflow-hidden">
+                        <img src={url.trim()} alt="" className="w-full h-full object-cover mix-blend-screen opacity-90" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*"
+                  onChange={e => setSelectedFiles(Array.from(e.target.files))}
+                  className="w-full text-sm text-[#9A9489] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C9A86A]/10 file:text-[#C9A86A] hover:file:bg-[#C9A86A]/20"
+                />
               </div>
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Precio *</label>

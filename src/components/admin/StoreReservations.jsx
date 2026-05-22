@@ -84,16 +84,16 @@ export default function StoreReservations() {
                     <span className="hidden sm:block text-[#3A3340]">•</span>
                     <span className="font-mono text-[#E8C77E]">{formatCOP(p.price)}</span>
                   </div>
-                </div>
-
-                <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
+                  
                   <div className={`text-xs px-3 py-1 rounded-full flex items-center gap-1.5 ${
                     isExpiringSoon ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-[#C9A86A]/10 text-[#C9A86A] border border-[#C9A86A]/20'
                   }`}>
                     <Icon name="Clock" size={12} />
-                    Expira: {new Date(res.expires_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    Expira: {new Date(res.expires_at).toLocaleString('es-CO', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'})}
                   </div>
-                  
+                </div>
+
+                <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button 
                       disabled={isProcessing}
