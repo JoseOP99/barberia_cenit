@@ -293,10 +293,15 @@ export default function RaffleManager() {
 
                   <div className="w-full md:w-64 shrink-0 space-y-3">
                     {isCompleted ? (
-                      <div className="bg-[#7FA86A]/10 border border-[#7FA86A]/20 rounded-xl p-4 text-center">
-                        <p className="text-[10px] uppercase tracking-widest text-[#7FA86A] mb-1">Ganador del Sorteo</p>
-                        <p className="text-lg font-medium text-[#F5F1E8]">{raffle.winner_name || raffle.winner_ticket_number || 'Ganador'}</p>
-                      </div>
+                      <>
+                        <div className="bg-[#7FA86A]/10 border border-[#7FA86A]/20 rounded-xl p-4 text-center">
+                          <p className="text-[10px] uppercase tracking-widest text-[#7FA86A] mb-1">Ganador del Sorteo</p>
+                          <p className="text-lg font-medium text-[#F5F1E8]">{raffle.winner_name || raffle.winner_ticket_number || 'Ganador'}</p>
+                        </div>
+                        <button onClick={() => handleDelete(raffle.id)} disabled={isProcessing} className="w-full px-4 py-2 border border-white/[0.08] text-xs text-red-400 rounded-lg hover:bg-red-500/10 transition flex justify-center items-center">
+                          Eliminar Historial
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button 
