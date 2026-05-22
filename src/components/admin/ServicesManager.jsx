@@ -15,14 +15,14 @@ export default function ServicesManager() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => { loadServices(); }, []);
-
   const loadServices = async () => {
     setLoading(true);
     const data = await servicesService.getAllServicesAdmin();
     setServices(data || []);
     setLoading(false);
   };
+
+  useEffect(() => { loadServices(); }, []);
 
   const handleEdit = (s) => {
     setEditingId(s.id);

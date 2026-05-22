@@ -54,3 +54,6 @@ secrets/
 # Package manager lock files (optional - keep if you want to commit)
 # package-lock.json
 # yarn.lock
+
+# Local scripts
+run-migration.js

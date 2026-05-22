@@ -10,6 +10,19 @@ const ID_TYPES = [
   { value: 'PP', label: 'Pasaporte' },
 ];
 
+const COUNTRY_CODES = [
+  { code: '+57', country: 'COL' },
+  { code: '+52', country: 'MEX' },
+  { code: '+51', country: 'PER' },
+  { code: '+54', country: 'ARG' },
+  { code: '+56', country: 'CHL' },
+  { code: '+58', country: 'VEN' },
+  { code: '+593', country: 'ECU' },
+  { code: '+507', country: 'PAN' },
+  { code: '+1', country: 'USA/CAN' },
+  { code: '+34', country: 'ESP' },
+];
+
 function InputField({ label, id, error, ...props }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -144,7 +157,7 @@ function RegisterForm({ onSwitchTab, onSuccess }) {
   const [form, setForm] = useState({
     first_name: '', second_name: '',
     first_lastname: '', second_lastname: '',
-    email: '', phone: '', password: '', confirmPassword: '',
+    email: '', phone: '', countryCode: '+57', password: '', confirmPassword: '',
     identification: '', identification_type: 'CC',
   });
   const [fieldErrors, setFieldErrors] = useState({});
@@ -180,7 +193,7 @@ function RegisterForm({ onSwitchTab, onSuccess }) {
         second_name: form.second_name || undefined,
         first_lastname: form.first_lastname,
         second_lastname: form.second_lastname || undefined,
-        phone: form.phone,
+        phone: `${form.countryCode} ${form.phone.trim()}`,
         identification: form.identification || undefined,
         identification_type: form.identification_type,
       });
@@ -209,9 +222,45 @@ function RegisterForm({ onSwitchTab, onSuccess }) {
       <InputField label="Correo electrónico *" id="reg-email" type="email" value={form.email}
         onChange={(e) => updateField('email', e.target.value)}
         placeholder="tu@correo.com" error={fieldErrors.email} required autoComplete="email" />
-      <InputField label="Teléfono *" id="reg-phone" type="tel" value={form.phone}
-        onChange={(e) => updateField('phone', e.target.value)}
-        placeholder="+57 300 123 4567" error={fieldErrors.phone} required />
+      
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="reg-phone" className="text-xs font-medium tracking-wide text-[#B5AFA5] uppercase">
+          Teléfono / WhatsApp *
+        </label>
+        <div className="flex gap-2">
+          <select
+            value={form.countryCode}
+            onChange={(e) => updateField('countryCode', e.target.value)}
+            className="w-28 px-2 py-3 rounded-xl text-sm text-[#F5F1E8] outline-none transition-all cursor-pointer focus:ring-2 focus:ring-[#C9A86A]/40"
+            style={{
+              background: '#1A1816',
+              border: fieldErrors.phone ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {COUNTRY_CODES.map(c => (
+              <option key={c.code} value={c.code} className="bg-[#1A1A1A] text-[#F5F1E8]">
+                {c.code} {c.country}
+              </option>
+            ))}
+          </select>
+          <input
+            id="reg-phone"
+            type="tel"
+            value={form.phone}
+            onChange={(e) => updateField('phone', e.target.value)}
+            placeholder="300 123 4567"
+            className="flex-1 px-4 py-3 rounded-xl text-sm text-[#F5F1E8] placeholder-[#6A655C] outline-none transition-all focus:ring-2 focus:ring-[#C9A86A]/40"
+            style={{
+              background: '#1A1816',
+              border: fieldErrors.phone ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          />
+        </div>
+        {fieldErrors.phone && <span className="text-xs text-red-400">{fieldErrors.phone}</span>}
+        <span className="text-[10px] text-[#9A9489] mt-0.5 ml-1">
+          Número de WhatsApp (Aquí podrás recibir notificaciones de eventos o citas).
+        </span>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField label="Tipo de documento" id="reg-idtype" value={form.identification_type}
           onChange={(e) => updateField('identification_type', e.target.value)}

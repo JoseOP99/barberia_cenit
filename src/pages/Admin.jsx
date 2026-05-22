@@ -3,19 +3,24 @@ import { Icon, Logo } from '../components/Shared';
 import { OPERATING_HOURS } from '../data/cenitData';
 import { useNavigate } from 'react-router-dom';
 import InventoryManager from '../components/admin/InventoryManager';
-import { DashboardView, CitasView } from '../components/admin/CalendarManager';
+import DashboardView from '../components/admin/DashboardView';
+import { CitasView } from '../components/admin/CalendarManager';
 import ServicesManager from '../components/admin/ServicesManager';
 import BarbersManager from '../components/admin/BarbersManager';
 import ScheduleManager from '../components/admin/ScheduleManager';
 import CustomerManager from '../components/admin/CustomerManager';
 import RaffleManager from '../components/admin/RaffleManager';
 import StoreReservations from '../components/admin/StoreReservations';
-import { PlaceholderView } from '../components/admin/AdminShared';
+import CashRegister from '../components/admin/CashRegister';
+import ExpensesManager from '../components/admin/ExpensesManager';
+
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'LayoutDashboard', label: 'Dashboard' },
+  { id: 'caja', icon: 'Banknote', label: 'Caja del Día' },
   { id: 'citas', icon: 'Calendar', label: 'Citas' },
   { id: 'clientes', icon: 'Users', label: 'Clientes' },
   { id: 'reservas-tienda', icon: 'Clock', label: 'Reservas Tienda' },
+  { id: 'gastos', icon: 'Receipt', label: 'Gastos' },
   { id: 'inventario', icon: 'ShoppingBag', label: 'Inventario' },
   { id: 'servicios', icon: 'Scissors', label: 'Servicios' },
   { id: 'equipo', icon: 'UserCircle', label: 'Equipo' },
@@ -80,9 +85,11 @@ export default function Admin() {
 
         <main className="flex-1 p-5 sm:p-8 overflow-y-auto">
           {view === 'dashboard' && <DashboardView />}
+          {view === 'caja' && <CashRegister />}
           {view === 'citas' && <CitasView />}
           {view === 'clientes' && <CustomerManager />}
           {view === 'reservas-tienda' && <StoreReservations />}
+          {view === 'gastos' && <ExpensesManager />}
           {view === 'inventario' && <InventoryManager />}
           {view === 'servicios' && <ServicesManager />}
           {view === 'equipo' && <BarbersManager />}

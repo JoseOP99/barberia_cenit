@@ -7,7 +7,7 @@ const handleError = (error, context) => {
 };
 
 export const raffleService = {
-  // Obtener todos los sorteos
+  // Obtener todos los sorteos (admin)
   async getAllRaffles() {
     try {
       const { data, error } = await supabase
@@ -16,8 +16,8 @@ export const raffleService = {
         .order('created_at', { ascending: false });
 
       if (error) handleError(error, 'getAllRaffles');
-      
-      // Fetch winners manually to avoid FK relation errors
+
+      // Fetch winner profiles manually
       if (data && data.length > 0) {
         const winnerIds = [...new Set(data.filter(r => r.winner_user_id).map(r => r.winner_user_id))];
         if (winnerIds.length > 0) {
@@ -25,24 +25,24 @@ export const raffleService = {
             .from('profiles')
             .select('id, first_name, first_lastname')
             .in('id', winnerIds);
-            
           if (profiles) {
             data.forEach(r => {
               if (r.winner_user_id) {
-                r.winner = profiles.find(p => p.id === r.winner_user_id);
+                const p = profiles.find(pr => pr.id === r.winner_user_id);
+                if (p) r.winner = { first_name: p.first_name, first_lastname: p.first_lastname };
               }
             });
           }
         }
       }
-      
+
       return data || [];
     } catch (err) {
       handleError(err, 'getAllRaffles');
     }
   },
 
-  // Obtener sorteos activos
+  // Obtener sorteos activos (para clientes)
   async getActiveRaffles() {
     try {
       const { data, error } = await supabase
@@ -66,15 +66,14 @@ export const raffleService = {
         .insert([{
           title: raffle.title,
           prize: raffle.prize,
-          draw_date: raffle.draw_date,
           start_date: raffle.start_date,
           end_date: raffle.end_date,
-          min_appointments: isNaN(parseInt(raffle.min_appointments, 10)) ? 1 : parseInt(raffle.min_appointments, 10),
-          ticket_digits: parseInt(raffle.ticket_digits, 10) || 6,
-          status: 'active'
+          draw_date: raffle.draw_date,
+          min_appointments: parseInt(raffle.min_appointments, 10) || 0,
+          status: 'active',
+          created_at: new Date().toISOString()
         }])
         .select();
-
       if (error) handleError(error, 'createRaffle');
       return data?.[0];
     } catch (err) {
@@ -82,23 +81,14 @@ export const raffleService = {
     }
   },
 
-  // Editar sorteo
-  async updateRaffle(id, raffle) {
+  // Actualizar sorteo
+  async updateRaffle(id, updates) {
     try {
       const { data, error } = await supabase
         .from('raffles')
-        .update({
-          title: raffle.title,
-          prize: raffle.prize,
-          draw_date: raffle.draw_date,
-          start_date: raffle.start_date,
-          end_date: raffle.end_date,
-          min_appointments: isNaN(parseInt(raffle.min_appointments, 10)) ? 1 : parseInt(raffle.min_appointments, 10),
-          ticket_digits: parseInt(raffle.ticket_digits, 10) || 6,
-        })
+        .update(updates)
         .eq('id', id)
         .select();
-
       if (error) handleError(error, 'updateRaffle');
       return data?.[0];
     } catch (err) {
@@ -106,42 +96,21 @@ export const raffleService = {
     }
   },
 
-  // Cancelar sorteo
-  async cancelRaffle(id) {
+  // Eliminar sorteo
+  async deleteRaffle(id) {
     try {
-      const { data, error } = await supabase
-        .from('raffles')
-        .update({ status: 'cancelled' })
-        .eq('id', id)
-        .select();
-
-      if (error) handleError(error, 'cancelRaffle');
-      return data?.[0];
+      // Clean up any old tickets if they exist
+      await supabase.from('raffle_tickets').delete().eq('raffle_id', id);
+      const { error } = await supabase.from('raffles').delete().eq('id', id);
+      if (error) handleError(error, 'deleteRaffle');
+      return true;
     } catch (err) {
-      handleError(err, 'cancelRaffle');
+      handleError(err, 'deleteRaffle');
     }
   },
 
-  // Obtener tickets de un usuario
-  async getUserTickets(userId) {
-    try {
-      const { data, error } = await supabase
-        .from('raffle_tickets')
-        .select(`
-          ticket_number,
-          raffles ( id, title, prize, draw_date, status, winner_ticket_number )
-        `)
-        .eq('user_id', userId);
-
-      if (error) handleError(error, 'getUserTickets');
-      return data || [];
-    } catch (err) {
-      handleError(err, 'getUserTickets');
-    }
-  },
-
-  // Generar tickets para un sorteo basado en las reglas
-  async generateTicketsForRaffle(raffleId) {
+  // Obtener participantes elegibles para un sorteo (sin crear tickets)
+  async getEligibleParticipants(raffleId) {
     try {
       // 1. Obtener detalles del sorteo
       const { data: raffle, error: err1 } = await supabase
@@ -152,7 +121,7 @@ export const raffleService = {
       if (err1) throw err1;
 
       // 2. Determinar usuarios elegibles
-      let eligibleUsers = [];
+      let eligibleUserIds = [];
 
       if (raffle.min_appointments === 0) {
         // Participan TODOS los usuarios registrados
@@ -160,9 +129,9 @@ export const raffleService = {
           .from('profiles')
           .select('id');
         if (errProfiles) throw errProfiles;
-        eligibleUsers = (profiles || []).map(p => p.id);
+        eligibleUserIds = (profiles || []).map(p => p.id);
       } else {
-        // 3. Obtener TODAS las citas completadas en el rango de fechas
+        // Obtener citas completadas en el rango de fechas
         const { data: appointments, error: err2 } = await supabase
           .from('appointments')
           .select('user_id')
@@ -172,110 +141,108 @@ export const raffleService = {
           .not('user_id', 'is', null);
         if (err2) throw err2;
 
-        // 4. Contar citas por usuario
+        // Contar citas por usuario
         const userCounts = {};
-        appointments.forEach(app => {
+        (appointments || []).forEach(app => {
           if (!userCounts[app.user_id]) userCounts[app.user_id] = 0;
           userCounts[app.user_id]++;
         });
 
-        // 5. Filtrar los usuarios que cumplen el mínimo
-        eligibleUsers = Object.keys(userCounts).filter(uid => userCounts[uid] >= raffle.min_appointments);
+        // Filtrar los que cumplen el mínimo
+        eligibleUserIds = Object.keys(userCounts).filter(uid => userCounts[uid] >= raffle.min_appointments);
       }
 
-      if (eligibleUsers.length === 0) return { success: true, count: 0, message: "Ningún cliente cumple los requisitos." };
+      if (eligibleUserIds.length === 0) {
+        return { participants: [], count: 0, message: 'Ningún cliente cumple los requisitos.' };
+      }
 
-      // 5. Verificar quiénes ya tienen ticket para NO duplicar (por el UNIQUE constraint fallaría)
-      const { data: existingTickets } = await supabase
-        .from('raffle_tickets')
-        .select('user_id, ticket_number')
-        .eq('raffle_id', raffleId);
-      const existingUserIds = new Set((existingTickets || []).map(t => t.user_id));
+      // 3. Obtener perfiles completos
+      const { data: profiles, error: errP } = await supabase
+        .from('profiles')
+        .select('id, first_name, first_lastname, phone, email')
+        .in('id', eligibleUserIds);
+      if (errP) throw errP;
 
-      const newEligible = eligibleUsers.filter(uid => !existingUserIds.has(uid));
-      if (newEligible.length === 0) return { success: true, count: 0, message: "Todos los clientes elegibles ya tienen su ticket." };
-
-      // 6. Asignar números y crear registros
-      const digits = parseInt(raffle.ticket_digits, 10) || 6;
-      const maxVal = Math.pow(10, digits) - 1;
-      
-      const usedNumbers = new Set((existingTickets || []).map(t => t.ticket_number));
-
-      const generateTicketNumber = () => {
-        let num;
-        let attempts = 0;
-        do {
-          num = Math.floor(Math.random() * (maxVal + 1)).toString().padStart(digits, '0');
-          attempts++;
-        } while (usedNumbers.has(num) && attempts < maxVal);
-        usedNumbers.add(num);
-        return num;
-      };
-      
-      const ticketsToInsert = newEligible.map(uid => ({
-        raffle_id: raffleId,
-        user_id: uid,
-        ticket_number: generateTicketNumber()
+      const participants = (profiles || []).map(p => ({
+        user_id: p.id,
+        name: `${p.first_name || ''} ${p.first_lastname || ''}`.trim() || 'Sin nombre',
+        phone: p.phone || '',
+        email: p.email || ''
       }));
 
-      const { error: err3 } = await supabase
-        .from('raffle_tickets')
-        .insert(ticketsToInsert);
-      if (err3) throw err3;
-
-      return { success: true, count: ticketsToInsert.length, message: `Se generaron ${ticketsToInsert.length} tickets nuevos.` };
-
+      return {
+        participants,
+        count: participants.length,
+        message: `${participants.length} cliente${participants.length !== 1 ? 's' : ''} elegible${participants.length !== 1 ? 's' : ''}.`
+      };
     } catch (err) {
-      handleError(err, 'generateTicketsForRaffle');
+      handleError(err, 'getEligibleParticipants');
     }
   },
 
-  // Realizar el sorteo
-  async drawWinner(raffleId) {
+  // Realizar el sorteo — selecciona un ganador al azar de los participantes
+  async drawWinner(raffleId, participants) {
     try {
-      // 1. Obtener todos los tickets de este sorteo
-      const { data: tickets, error: err1 } = await supabase
-        .from('raffle_tickets')
-        .select('*')
-        .eq('raffle_id', raffleId);
-      
-      if (err1) throw err1;
-      if (!tickets || tickets.length === 0) {
-        throw new Error('No hay tickets generados para este sorteo.');
+      if (!participants || participants.length === 0) {
+        throw new Error('No hay participantes para este sorteo.');
       }
 
-      // 2. Seleccionar un ganador al azar
-      const randomIndex = Math.floor(Math.random() * tickets.length);
-      const winningTicket = tickets[randomIndex];
+      // Seleccionar ganador al azar
+      const randomIndex = Math.floor(Math.random() * participants.length);
+      const winner = participants[randomIndex];
 
-      // 3. Actualizar el sorteo
-      const { data: updated, error: err2 } = await supabase
+      // Actualizar el sorteo con el ganador
+      const { data: updated, error: err } = await supabase
         .from('raffles')
         .update({
           status: 'completed',
-          winner_user_id: winningTicket.user_id,
-          winner_ticket_number: winningTicket.ticket_number
+          winner_user_id: winner.user_id,
+          winner_ticket_number: winner.name // Reuse field to store winner name
         })
         .eq('id', raffleId)
         .select()
         .single();
-      
-      if (err2) throw err2;
 
-      // 4. Buscar el ganador manualmente para evitar errores de foreign key (si la relación falla en Supabase)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, first_lastname')
-        .eq('id', winningTicket.user_id)
-        .single();
-      
-      if (profile) {
-        updated.winner = profile;
-      }
+      if (err) throw err;
+
+      updated.winner = { first_name: winner.name.split(' ')[0], first_lastname: winner.name.split(' ').slice(1).join(' ') };
+      updated.winner_name = winner.name;
 
       return updated;
     } catch (err) {
       handleError(err, 'drawWinner');
+    }
+  },
+
+  // Check if a user is eligible for a raffle
+  async isUserEligible(userId, raffleId) {
+    try {
+      const { data: raffle, error: err1 } = await supabase
+        .from('raffles')
+        .select('*')
+        .eq('id', raffleId)
+        .single();
+      if (err1) throw err1;
+
+      if (raffle.min_appointments === 0) return { eligible: true, appointmentsDone: 0, missing: 0 };
+
+      const { data: appointments, error: err2 } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .gte('appointment_date', raffle.start_date)
+        .lte('appointment_date', raffle.end_date);
+      if (err2) throw err2;
+
+      const count = (appointments || []).length;
+      return {
+        eligible: count >= raffle.min_appointments,
+        appointmentsDone: count,
+        missing: Math.max(0, raffle.min_appointments - count)
+      };
+    } catch (err) {
+      handleError(err, 'isUserEligible');
     }
   }
 };
