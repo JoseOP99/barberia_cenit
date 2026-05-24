@@ -243,12 +243,12 @@ function RegisterForm({ onSwitchTab, onSuccess }) {
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <SelectField label="Tipo de documento" id="reg-idtype" value={form.identification_type}
+        <SelectField label="Tipo de documento (Opcional)" id="reg-idtype" value={form.identification_type}
           onChange={(e) => updateField('identification_type', e.target.value)}
           options={ID_TYPES} />
-        <InputField label="Número de documento" id="reg-idnum" value={form.identification}
+        <InputField label="Número de documento (Opcional)" id="reg-idnum" value={form.identification}
           onChange={(e) => updateField('identification', e.target.value)}
-          placeholder="1.234.567.890" />
+          placeholder="(Opcional)" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="Contraseña *" id="reg-pass" type="password" value={form.password}
