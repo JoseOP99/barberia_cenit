@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../Shared';
 import customerService from '../../services/customerService';
 
@@ -178,9 +179,9 @@ export default function CustomerManager() {
         </table>
       </div>
 
-      {editingCustomer && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1A1816] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden">
+      {editingCustomer && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-[#1A1816] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-white/[0.08] flex justify-between items-center">
               <h3 className="text-lg font-medium text-[#F5F1E8]">Editar Cliente</h3>
               <button onClick={() => setEditingCustomer(null)} className="text-[#9A9489] hover:text-white transition-colors">
@@ -247,7 +248,8 @@ export default function CustomerManager() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
