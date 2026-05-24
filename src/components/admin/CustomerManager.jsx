@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../Shared';
+import { COUNTRY_CODES } from '../../constants';
 import customerService from '../../services/customerService';
 
 export default function CustomerManager() {
@@ -8,15 +9,30 @@ export default function CustomerManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const [editForm, setEditForm] = useState({ first_name: '', first_lastname: '', email: '', phone: '' });
+  const [editForm, setEditForm] = useState({ first_name: '', first_lastname: '', email: '', phone: '', countryCode: '+57' });
 
   useEffect(() => {
     if (editingCustomer) {
+      let code = '+57';
+      let phoneNum = '';
+      if (editingCustomer.phone) {
+        // Find matching country code (longest first to avoid partial matches)
+        const sortedCodes = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+        const match = sortedCodes.find(c => editingCustomer.phone.startsWith(c.code));
+        if (match) {
+          code = match.code;
+          phoneNum = editingCustomer.phone.slice(match.code.length).trim();
+        } else {
+          phoneNum = editingCustomer.phone.trim();
+        }
+      }
+
       setEditForm({
         first_name: editingCustomer.first_name || '',
         first_lastname: editingCustomer.first_lastname || '',
         email: editingCustomer.email || '',
-        phone: editingCustomer.phone || ''
+        phone: phoneNum,
+        countryCode: code
       });
     }
   }, [editingCustomer]);
@@ -67,7 +83,9 @@ export default function CustomerManager() {
       if (editForm.first_name !== editingCustomer.first_name) updates.first_name = editForm.first_name;
       if (editForm.first_lastname !== editingCustomer.first_lastname) updates.first_lastname = editForm.first_lastname;
       if (editForm.email !== editingCustomer.email) updates.email = editForm.email;
-      if (editForm.phone !== editingCustomer.phone) updates.phone = editForm.phone;
+      
+      const combinedPhone = editForm.phone.trim() ? `${editForm.countryCode} ${editForm.phone.trim()}` : '';
+      if (combinedPhone !== (editingCustomer.phone || '')) updates.phone = combinedPhone;
 
       if (Object.keys(updates).length > 0) {
         await customerService.updateCustomerProfile(editingCustomer.id, updates);
@@ -223,12 +241,26 @@ export default function CustomerManager() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-[#9A9489] uppercase tracking-wider">Teléfono</label>
-                <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
-                />
+                <div className="flex gap-2">
+                  <select
+                    value={editForm.countryCode}
+                    onChange={e => setEditForm({ ...editForm, countryCode: e.target.value })}
+                    className="w-[140px] bg-[#1A1816] border border-white/[0.08] rounded-xl px-2 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none cursor-pointer"
+                  >
+                    {COUNTRY_CODES.map(c => (
+                      <option key={c.code} value={c.code} className="bg-[#1A1A1A] text-[#F5F1E8]">
+                        {c.code} {c.country}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="flex-1 bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
+                    placeholder="300 123 4567"
+                  />
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">

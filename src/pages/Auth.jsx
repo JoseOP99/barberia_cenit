@@ -2,26 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Icon, Logo } from '../components/Shared';
-
-const ID_TYPES = [
-  { value: 'CC', label: 'Cédula de Ciudadanía' },
-  { value: 'TI', label: 'Tarjeta de Identidad' },
-  { value: 'CE', label: 'Cédula de Extranjería' },
-  { value: 'PP', label: 'Pasaporte' },
-];
-
-const COUNTRY_CODES = [
-  { code: '+57', country: 'COL' },
-  { code: '+52', country: 'MEX' },
-  { code: '+51', country: 'PER' },
-  { code: '+54', country: 'ARG' },
-  { code: '+56', country: 'CHL' },
-  { code: '+58', country: 'VEN' },
-  { code: '+593', country: 'ECU' },
-  { code: '+507', country: 'PAN' },
-  { code: '+1', country: 'USA/CAN' },
-  { code: '+34', country: 'ESP' },
-];
+import { ID_TYPES, COUNTRY_CODES } from '../constants';
 
 function InputField({ label, id, error, ...props }) {
   return (
