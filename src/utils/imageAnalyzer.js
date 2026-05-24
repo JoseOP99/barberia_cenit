@@ -8,6 +8,7 @@ let mobilenetModel = null;
 const MAPPED_COLORS = {
   'Negro': '#1A1816',
   'Blanco': '#F5F1E8',
+  'Beige': '#D2B48C',
   'Dorado': '#C9A86A',
   'Verde': '#7FA86A',
   'Rojo': '#C56B5A',
@@ -41,33 +42,77 @@ export const extractColor = async (imageElement) => {
   try {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    canvas.width = 50; 
-    canvas.height = 50;
-    ctx.drawImage(imageElement, 0, 0, 50, 50);
     
-    const imageData = ctx.getImageData(0, 0, 50, 50).data;
-    let r = 0, g = 0, b = 0, count = 0;
+    // Redimensionar para análisis rápido
+    canvas.width = 100; 
+    canvas.height = 100;
+    ctx.drawImage(imageElement, 0, 0, 100, 100);
     
+    // Solo analizar el cuadro central de la imagen (evitar la pared, la mesa, el parlante)
+    // El centro exacto (desde el pixel 30 hasta el 70 en x/y)
+    const startX = 30;
+    const startY = 30;
+    const width = 40;
+    const height = 40;
+    
+    const imageData = ctx.getImageData(startX, startY, width, height).data;
+    
+    // Usar "cubetas" de colores para encontrar el color más frecuente, no el promedio.
+    const colorBuckets = {};
+    let maxBucketCount = 0;
+    let dominantRGB = { r: 0, g: 0, b: 0 };
+
     for (let i = 0; i < imageData.length; i += 4) {
       const pr = imageData[i], pg = imageData[i+1], pb = imageData[i+2], a = imageData[i+3];
       if (a < 128) continue; // Ignorar transparentes
-      if (pr > 240 && pg > 240 && pb > 240) continue; // Ignorar blanco (suele ser fondo)
-      if (pr < 20 && pg < 20 && pb < 20) continue; // Ignorar negro puro (sombras)
+      if (pr > 240 && pg > 240 && pb > 240) continue; // Ignorar muy blancos (stickers/logos)
+      if (pr < 20 && pg < 20 && pb < 20) continue; // Ignorar muy negros (sombras profundas)
       
-      r += pr; g += pg; b += pb;
-      count++;
+      // Agrupar colores similares (cuantización)
+      const qR = Math.round(pr / 32) * 32;
+      const qG = Math.round(pg / 32) * 32;
+      const qB = Math.round(pb / 32) * 32;
+      
+      const key = `${qR},${qG},${qB}`;
+      if (!colorBuckets[key]) {
+        colorBuckets[key] = { count: 0, r: 0, g: 0, b: 0 };
+      }
+      colorBuckets[key].count++;
+      colorBuckets[key].r += pr;
+      colorBuckets[key].g += pg;
+      colorBuckets[key].b += pb;
     }
+      
+    const sortedBuckets = Object.values(colorBuckets).sort((a, b) => b.count - a.count);
     
-    if (count > 0) {
-      r = Math.floor(r / count);
-      g = Math.floor(g / count);
-      b = Math.floor(b / count);
-    } else {
-      r = 0; g = 0; b = 0; // Fallback
+    if (sortedBuckets.length > 0) {
+      const top1 = sortedBuckets[0];
+      const r1 = Math.floor(top1.r / top1.count);
+      const g1 = Math.floor(top1.g / top1.count);
+      const b1 = Math.floor(top1.b / top1.count);
+      const name1 = getClosestColorName(r1, g1, b1);
+      
+      let finalName = name1;
+      
+      // Si hay un segundo color prominente (al menos un 30% tan frecuente como el primero)
+      if (sortedBuckets.length > 1) {
+        const top2 = sortedBuckets[1];
+        if (top2.count > top1.count * 0.3) {
+          const r2 = Math.floor(top2.r / top2.count);
+          const g2 = Math.floor(top2.g / top2.count);
+          const b2 = Math.floor(top2.b / top2.count);
+          const name2 = getClosestColorName(r2, g2, b2);
+          
+          if (name2 !== name1) {
+            finalName = `${name1} y ${name2}`;
+          }
+        }
+      }
+      
+      return { name: finalName, hex: MAPPED_COLORS[name1] };
     }
 
-    const name = getClosestColorName(r, g, b);
-    return { name, hex: MAPPED_COLORS[name] };
+    return { name: 'Negro', hex: '#1A1816' };
   } catch (error) {
     console.error("Color extraction failed:", error);
     return null;

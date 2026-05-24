@@ -181,6 +181,16 @@ export default function InventoryManager() {
                     ))}
                   </div>
                 )}
+
+                {selectedFiles.length > 0 && (
+                  <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                    {selectedFiles.map((file, i) => (
+                      <div key={`new-${i}`} className="relative w-12 h-12 shrink-0 border border-[#C9A86A]/50 rounded bg-[#1A1816] overflow-hidden">
+                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover mix-blend-screen opacity-90" />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <input 
@@ -194,12 +204,18 @@ export default function InventoryManager() {
                         setIsAnalyzing(true);
                         try {
                           const analysis = await analyzeImage(files[0]);
+                          const collectionStr = analysis.collection !== 'Básicos' ? analysis.collection : 'Gorra';
+                          const teamStr = analysis.team ? ` ${analysis.team}` : '';
+                          const colorStr = analysis.color?.name ? ` ${analysis.color.name}` : '';
+                          const generatedName = `${collectionStr}${teamStr}${colorStr}`;
+
                           setForm(prev => ({
                             ...prev,
-                            collection: analysis.collection !== 'Básicos' ? analysis.collection : prev.collection,
-                            color_name: analysis.color?.name || prev.color_name,
-                            color_hex: analysis.color?.hex || prev.color_hex,
-                            description: analysis.team ? (prev.description ? `${analysis.team} - ${prev.description}` : analysis.team) : prev.description
+                            name: prev.name ? prev.name : generatedName,
+                            collection: (prev.collection === 'Gorra' || !prev.collection) ? (analysis.collection !== 'Básicos' ? analysis.collection : 'Gorra') : prev.collection,
+                            color_name: prev.color_name ? prev.color_name : (analysis.color?.name || ''),
+                            color_hex: prev.color_hex !== '#1A1816' ? prev.color_hex : (analysis.color?.hex || '#1A1816'),
+                            description: prev.description ? prev.description : (analysis.team || '')
                           }));
                         } catch (err) {
                           console.error("Analysis failed", err);
