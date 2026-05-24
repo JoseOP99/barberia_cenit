@@ -1,12 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
-import { getEmailTemplate } from '../src/utils/emailTemplate.js';
+import { buildEmailContent } from './utils/emailBuilder.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
+  // Verificación de seguridad requerida por Vercel Cron
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid CRON_SECRET' });
+  }
+
   try {
     // 1. Obtener productos creados en las últimas 24 horas
     const yesterday = new Date();
@@ -49,17 +55,12 @@ export default async function handler(req, res) {
     const emails = customers.map(c => c.email).filter(Boolean);
 
     if (emails.length > 0) {
-      const html = getEmailTemplate(
-        '¡Nuevos Lanzamientos en Cénit!',
-        `<p style="text-align: center;">Se han agregado nuevos productos a nuestra boutique en las últimas horas.</p>
-         <div style="background-color: #1A1816; padding: 20px; border-radius: 8px; border: 1px solid #C9A86A; margin: 20px 0; text-align: center;">
-           <h2 style="margin: 0; color: #E8C77E; font-size: 20px;">${randomProduct.name}</h2>
-           ${randomProduct.tag ? `<p style="display:inline-block; background-color:#C9A86A; color:#0A0A0A; padding:3px 8px; font-size:12px; font-weight:bold; border-radius:3px; margin: 10px 0;">${randomProduct.tag}</p>` : ''}
-           <p style="font-family: monospace; font-size: 22px; margin: 10px 0 0 0; color: #F1ECDE;">$${randomProduct.price.toLocaleString('es-CO')}</p>
-         </div>`,
-        'https://cenit-barber.vercel.app/tienda',
-        'Ver Tienda Completa'
-      );
+      const payload = {
+        name: randomProduct.name,
+        price: randomProduct.price,
+        tag: randomProduct.tag
+      };
+      const { subject, html } = buildEmailContent('NEW_PRODUCT_CRON', payload);
 
       await transporter.sendMail({
         from: `"Cénit Barbería" <${process.env.VITE_GMAIL_USER || 'barbercenit@gmail.com'}>`,

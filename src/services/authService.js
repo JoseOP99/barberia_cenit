@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
 import notificationService from './notificationService';
-import { getEmailTemplate } from '../utils/emailTemplate';
 
 const handleError = (error, context) => {
   const errorMessage = error?.message || 'Error desconocido';
@@ -70,34 +69,15 @@ export const authService = {
       if (data?.user) {
         notificationService.sendEmail({
           to: email,
-          subject: '¡Bienvenido a Cénit Barbería! 💈',
-          html: getEmailTemplate(
-            '¡Bienvenido a Cénit!',
-            `<p>Hola <b>${first_name}</b>,</p>
-             <p>Tu cuenta ha sido creada exitosamente. Bienvenido a la comunidad Cénit, donde el estilo y la elegancia se encuentran.</p>
-             <div style="background-color: #1A1816; border: 1px solid #2A2530; padding: 15px; border-radius: 8px; margin: 20px 0;">
-               <p style="margin: 0; color: #E8C77E;">Ahora puedes agendar tus citas, comprar en nuestra boutique exclusiva y participar en nuestros sorteos especiales.</p>
-             </div>`,
-            'https://cenit-barber.vercel.app/auth',
-            'Ingresar a mi cuenta'
-          )
+          type: 'WELCOME_CLIENT',
+          payload: { first_name }
         });
 
         // Correo a Nando
         notificationService.sendEmail({
           to: 'barbercenit@gmail.com, nandom0201@gmail.com', // O el correo del admin que definas
-          subject: 'Nuevo cliente registrado: ' + first_name + ' ' + first_lastname,
-          html: getEmailTemplate(
-            'Nuevo Registro',
-            `<p>Un nuevo cliente se acaba de registrar en la plataforma:</p>
-             <ul style="list-style: none; padding: 0; margin: 15px 0;">
-               <li style="margin-bottom: 8px;"><b>Nombre:</b> ${first_name} ${first_lastname}</li>
-               <li style="margin-bottom: 8px;"><b>Email:</b> ${email}</li>
-               <li style="margin-bottom: 8px;"><b>Teléfono:</b> ${phone || 'No registrado'}</li>
-             </ul>`,
-            'https://cenit-barber.vercel.app/admin/clients',
-            'Ver Clientes'
-          )
+          type: 'NEW_REGISTER_ADMIN',
+          payload: { first_name, first_lastname, email, phone }
         });
       }
 

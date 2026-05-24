@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import notificationService from './notificationService';
 import customerService from './customerService';
-import { getEmailTemplate } from '../utils/emailTemplate';
+import { notificationService } from './notificationService';
 
 const handleError = (error, context) => {
   const errorMessage = error?.message || 'Error desconocido';
@@ -87,18 +87,12 @@ export const raffleService = {
           if (emails.length > 0) {
             notificationService.sendEmail({
               bcc: emails,
-              subject: `¡Nuevo Sorteo en Cénit! 🎁 Participa por: ${newRaffle.prize}`,
-              html: getEmailTemplate(
-                '¡Nuevo Sorteo Activo!',
-                `<div style="background-color: #1A1816; border: 1px solid #C9A86A; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-                   <h2 style="color: #E8C77E; margin: 0; font-size: 20px;">${newRaffle.title}</h2>
-                   <p style="font-size: 18px; color: #F1ECDE; margin-top: 10px;">Premio: <b>${newRaffle.prize}</b></p>
-                 </div>
-                 <p style="color: #9A9489; margin: 5px 0;">El sorteo se realizará el <b>${newRaffle.draw_date}</b>.</p>
-                 ${newRaffle.min_appointments > 0 ? `<p style="color: #9A9489;">Para participar, debes acumular al menos <b>${newRaffle.min_appointments} citas</b> antes de la fecha del sorteo.</p>` : `<p style="color: #9A9489;">¡Todos nuestros clientes participan automáticamente!</p>`}`,
-                'https://cenit-barber.vercel.app/sorteos',
-                'Ver Sorteos'
-              )
+              type: 'NEW_RAFFLE_ALL',
+              payload: {
+                title: newRaffle.title,
+                prize: newRaffle.prize,
+                draw_date: newRaffle.draw_date
+              }
             });
           }
         });
@@ -239,25 +233,18 @@ export const raffleService = {
       updated.winner = { first_name: winner.name.split(' ')[0], first_lastname: winner.name.split(' ').slice(1).join(' ') };
       updated.winner_name = winner.name;
 
-      // Anunciar el ganador a TODOS los clientes (como pidió el usuario)
+      // Anunciar el ganador a TODOS los clientes
       customerService.getAllCustomers().then(customers => {
         const emails = customers.map(c => c.email).filter(Boolean);
         if (emails.length > 0) {
           notificationService.sendEmail({
             bcc: emails,
-            subject: `¡Tenemos un ganador en Cénit! 🏆`,
-            html: getEmailTemplate(
-              '¡Tenemos un Ganador!',
-              `<p style="text-align: center;">Acabamos de realizar el sorteo: <b>${updated.title}</b></p>
-               <div style="background-color: #1A1816; border: 1px solid #C9A86A; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
-                 <p style="color: #9A9489; font-size: 14px; margin: 0;">EL AFORTUNADO GANADOR ES:</p>
-                 <h2 style="color: #E8C77E; font-size: 24px; margin: 10px 0 0 0;">🎉 ${winner.name.toUpperCase()} 🎉</h2>
-                 <p style="color: #F1ECDE; margin-top: 10px;">¡Se ha llevado: <b>${updated.prize}</b>!</p>
-               </div>
-               <p style="color: #9A9489; text-align: center; font-size: 14px;">Si fuiste tú, por favor comunícate con nosotros para reclamar tu premio. Si no fuiste tú, ¡mantente atento a nuestros próximos sorteos!</p>`,
-              'https://cenit-barber.vercel.app/sorteos',
-              'Ver Sorteos'
-            )
+            type: 'RAFFLE_WINNER_ALL',
+            payload: {
+              raffleTitle: updated.title,
+              winnerName: winner.name,
+              prize: updated.prize
+            }
           });
         }
       });
@@ -265,19 +252,13 @@ export const raffleService = {
       // Correo a Nando informando del ganador
       notificationService.sendEmail({
         to: 'barbercenit@gmail.com, nandom0201@gmail.com', // Admin
-        subject: 'Sorteo finalizado: Tenemos un ganador',
-        html: getEmailTemplate(
-          'Sorteo Finalizado',
-          `<p>El sistema ha seleccionado automáticamente a un ganador de forma aleatoria para el sorteo <b>'${updated.title}'</b>:</p>
-           <ul style="list-style: none; padding: 0; margin: 15px 0;">
-             <li style="margin-bottom: 8px;"><b>Ganador:</b> ${winner.name}</li>
-             <li style="margin-bottom: 8px;"><b>Email:</b> ${winner.email || 'No registrado'}</li>
-             <li style="margin-bottom: 8px;"><b>Teléfono:</b> ${winner.phone || 'No registrado'}</li>
-           </ul>
-           <p>Por favor contáctalo para entregar el premio.</p>`,
-          'https://cenit-barber.vercel.app/admin/raffles',
-          'Ver Panel de Sorteos'
-        )
+        type: 'RAFFLE_WINNER_ADMIN',
+        payload: {
+          raffleTitle: updated.title,
+          winnerName: winner.name,
+          winnerEmail: winner.email,
+          winnerPhone: winner.phone
+        }
       });
 
       return updated;

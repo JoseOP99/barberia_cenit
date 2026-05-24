@@ -1,13 +1,25 @@
+import { supabase } from './supabaseClient';
+
 export const notificationService = {
-  async sendEmail({ to, bcc, subject, html }) {
+  async sendEmail({ to, bcc, type, payload }) {
     try {
-      // Usamos ruta relativa, Vercel lo ruteará correctamente
+      // 1. Obtener la sesión actual para autorizar la petición
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.warn('notificationService: No active session. Email not sent.');
+        return null; // Opcional: lanzar error si es estricto
+      }
+
+      // 2. Enviar petición segura a nuestra API
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ to, bcc, subject, html })
+        body: JSON.stringify({ to, bcc, type, payload })
       });
 
       const data = await res.json();
