@@ -3,6 +3,7 @@ import { Icon } from '../Shared';
 import { formatCOP } from '../../data/cenitData';
 import useProducts from '../../hooks/useProducts';
 import { productsService } from '../../services/productsService';
+import { analyzeImage } from '../../utils/imageAnalyzer';
 
 const INITIAL_FORM = {
   name: '', description: '', price: '', stock: 1, collection: 'Gorra',
@@ -16,6 +17,7 @@ export default function InventoryManager() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
 
   const handleEdit = (p) => {
@@ -180,13 +182,41 @@ export default function InventoryManager() {
                   </div>
                 )}
                 
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*"
-                  onChange={e => setSelectedFiles(Array.from(e.target.files))}
-                  className="w-full text-sm text-[#9A9489] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C9A86A]/10 file:text-[#C9A86A] hover:file:bg-[#C9A86A]/20"
-                />
+                <div className="space-y-2">
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*"
+                    onChange={async e => {
+                      const files = Array.from(e.target.files);
+                      setSelectedFiles(files);
+                      if (files.length > 0 && !editingId) {
+                        setIsAnalyzing(true);
+                        try {
+                          const analysis = await analyzeImage(files[0]);
+                          setForm(prev => ({
+                            ...prev,
+                            collection: analysis.collection !== 'Básicos' ? analysis.collection : prev.collection,
+                            color_name: analysis.color?.name || prev.color_name,
+                            color_hex: analysis.color?.hex || prev.color_hex,
+                            description: analysis.team ? (prev.description ? `${analysis.team} - ${prev.description}` : analysis.team) : prev.description
+                          }));
+                        } catch (err) {
+                          console.error("Analysis failed", err);
+                        } finally {
+                          setIsAnalyzing(false);
+                        }
+                      }
+                    }}
+                    className="w-full text-sm text-[#9A9489] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C9A86A]/10 file:text-[#C9A86A] hover:file:bg-[#C9A86A]/20"
+                  />
+                  {isAnalyzing && (
+                    <div className="flex items-center gap-2 text-xs text-[#C9A86A] animate-pulse">
+                      <Icon name="Loader" className="animate-spin" size={14} />
+                      Analizando imagen con IA (Categoría, Color, Texto)...
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Precio *</label>
