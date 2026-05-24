@@ -57,38 +57,38 @@ function KPICard({ label, value, icon, subValue, trend, valueClass = 'text-[#F5F
   );
 }
 
-// ─── Financial dual-bar chart ───
-function FinancialChart({ data, formatValue }) {
-  const max = Math.max(...data.map(d => Math.max(d.revenue, d.expenses)), 1);
+// ─── Dual-bar chart ───
+function DualBarChart({ data, formatValue, bar1Key, bar2Key, bar1Color, bar2Color, bar1Label, bar2Label }) {
+  const max = Math.max(...data.map(d => Math.max(d[bar1Key], d[bar2Key])), 1);
   return (
     <div className="flex items-end gap-3 h-48 mt-4 px-2">
       {data.map((d, i) => {
-        const revPct = (d.revenue / max) * 100;
-        const expPct = (d.expenses / max) * 100;
+        const pct1 = (d[bar1Key] / max) * 100;
+        const pct2 = (d[bar2Key] / max) * 100;
         return (
           <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group h-full relative">
             {/* Tooltip on hover */}
-            <div className="absolute -top-10 bg-black/90 border border-white/10 rounded-lg p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-28 -ml-6 hidden sm:block">
-              <div className="text-[10px] text-[#C9A86A]">Ingresos: {formatValue(d.revenue)}</div>
-              <div className="text-[10px] text-[#C56B5A]">Gastos: {formatValue(d.expenses)}</div>
+            <div className="absolute -top-12 bg-black/90 border border-white/10 rounded-lg p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-32 -ml-8 hidden sm:block shadow-xl">
+              <div className="text-[10px] mb-0.5" style={{color: bar1Color}}>{bar1Label}: {formatValue(d[bar1Key])}</div>
+              <div className="text-[10px]" style={{color: bar2Color}}>{bar2Label}: {formatValue(d[bar2Key])}</div>
             </div>
             
             {/* Bars container */}
             <div className="w-full flex-1 flex items-end justify-center gap-1 relative">
-              {/* Revenue bar */}
+              {/* Bar 1 */}
               <div
                 className="w-full max-w-[20px] rounded-t-sm transition-all duration-700 ease-out"
                 style={{
-                  height: `${Math.max(revPct, 2)}%`,
-                  background: 'linear-gradient(to top, rgba(201,168,106,0.3), #C9A86A)'
+                  height: `${Math.max(pct1, 2)}%`,
+                  background: `linear-gradient(to top, ${bar1Color}40, ${bar1Color})`
                 }}
               />
-              {/* Expenses bar */}
+              {/* Bar 2 */}
               <div
                 className="w-full max-w-[20px] rounded-t-sm transition-all duration-700 ease-out"
                 style={{
-                  height: `${Math.max(expPct, 2)}%`,
-                  background: 'linear-gradient(to top, rgba(197,107,90,0.3), #C56B5A)'
+                  height: `${Math.max(pct2, 2)}%`,
+                  background: `linear-gradient(to top, ${bar2Color}40, ${bar2Color})`
                 }}
               />
             </div>
@@ -117,6 +117,7 @@ export default function DashboardView() {
   const [allExpenses, setAllExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartOffset, setChartOffset] = useState(0);
+  const [chartView, setChartView] = useState('week'); // 'week' | 'months'
 
   const loadAll = async () => {
     setLoading(true);
@@ -249,6 +250,30 @@ export default function DashboardView() {
       });
     }
 
+    // Weekly chart logic (Last 7 days)
+    const weekData = [];
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = getLocalDateString(d);
+      
+      const appts = allAppointments.filter(a => a.appointment_date === key && a.status === 'completed');
+      const walkins = allSales.filter(s => s.date === key);
+      
+      const revAppts = appts.reduce((s, a) => s + (a.services?.price || 0), 0);
+      const revWalkins = walkins.reduce((s, a) => s + (a.quantity * a.price_per_unit), 0);
+      
+      weekData.push({
+        label: i === 0 ? 'Hoy' : dayNames[d.getDay()],
+        date: key,
+        bar1: revAppts,
+        bar2: revWalkins,
+        countAppts: appts.length,
+        countWalkins: walkins.reduce((s, w) => s + w.quantity, 0)
+      });
+    }
+
     // Top clients (by completed appointments count)
     const clientCounts = {};
     allAppointments
@@ -290,7 +315,7 @@ export default function DashboardView() {
     return {
       todayCitas, todayRevenue, nextAppt, todayTotalCortes, todayWalkinCount,
       monthCompleted: monthCompleted.length, monthRevenue, monthCancelled, revenueTrend, monthProfit, monthExpenses,
-      months, topClients, topServices, totalServiceCount,
+      months, weekData, topClients, topServices, totalServiceCount,
       totalRevenue, totalClients, totalCompleted: allCompleted.length, completionRate,
       currentMonthName: MONTH_FULL[today.getMonth()]
     };
@@ -341,41 +366,72 @@ export default function DashboardView() {
 
         {/* ─── Revenue & Expenses Chart ─── */}
         <div className="lg:col-span-2 rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-3">
             <div>
-              <h3 className="text-sm font-medium text-[#F5F1E8]">Flujo de Caja</h3>
-              <p className="text-xs text-[#9A9489]">Ingresos vs Gastos por mes</p>
+              <h3 className="text-sm font-medium text-[#F5F1E8]">{chartView === 'months' ? 'Flujo de Caja' : 'Ingresos Últimos 7 Días'}</h3>
+              <p className="text-xs text-[#9A9489]">{chartView === 'months' ? 'Ingresos vs Gastos por mes' : 'Ingresos de Citas vs Tienda Física'}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-white/[0.02] p-1 rounded-lg border border-white/[0.06]">
               <button 
-                onClick={() => setChartOffset(prev => Math.min(prev + 1, 2))}
-                disabled={chartOffset === 2}
-                className="w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-[#9A9489] hover:text-[#C9A86A] transition disabled:opacity-30 disabled:hover:text-[#9A9489]"
-                title="Ver meses anteriores"
+                onClick={() => setChartView('week')}
+                className={`text-xs px-3 py-1.5 rounded-md transition ${chartView === 'week' ? 'bg-[#C9A86A] text-[#1A1816] font-medium' : 'text-[#9A9489] hover:text-[#F5F1E8]'}`}
               >
-                <Icon name="ChevronLeft" size={14} />
+                7 Días
               </button>
               <button 
-                onClick={() => setChartOffset(prev => Math.max(prev - 1, 0))}
-                disabled={chartOffset === 0}
-                className="w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-[#9A9489] hover:text-[#C9A86A] transition disabled:opacity-30 disabled:hover:text-[#9A9489]"
-                title="Ver meses recientes"
+                onClick={() => setChartView('months')}
+                className={`text-xs px-3 py-1.5 rounded-md transition ${chartView === 'months' ? 'bg-[#C9A86A] text-[#1A1816] font-medium' : 'text-[#9A9489] hover:text-[#F5F1E8]'}`}
               >
-                <Icon name="ChevronRight" size={14} />
+                Meses
               </button>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 mb-2 text-[10px] uppercase tracking-wider">
-            <span className="flex items-center gap-1.5 text-[#C9A86A]">
-              <span className="w-2 h-2 rounded-full bg-[#C9A86A]"></span> Ingresos
-            </span>
-            <span className="flex items-center gap-1.5 text-[#C56B5A]">
-              <span className="w-2 h-2 rounded-full bg-[#C56B5A]"></span> Gastos
-            </span>
-          </div>
-
-          <FinancialChart data={stats.months} formatValue={formatCOP} />
+          {chartView === 'months' ? (
+            <>
+              <div className="flex items-center gap-4 mb-2 text-[10px] uppercase tracking-wider justify-between">
+                <div className="flex gap-4">
+                  <span className="flex items-center gap-1.5 text-[#C9A86A]">
+                    <span className="w-2 h-2 rounded-full bg-[#C9A86A]"></span> Ingresos
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[#C56B5A]">
+                    <span className="w-2 h-2 rounded-full bg-[#C56B5A]"></span> Gastos
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setChartOffset(prev => Math.min(prev + 1, 2))}
+                    disabled={chartOffset === 2}
+                    className="w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-[#9A9489] hover:text-[#C9A86A] transition disabled:opacity-30 disabled:hover:text-[#9A9489]"
+                    title="Ver meses anteriores"
+                  >
+                    <Icon name="ChevronLeft" size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setChartOffset(prev => Math.max(prev - 1, 0))}
+                    disabled={chartOffset === 0}
+                    className="w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-[#9A9489] hover:text-[#C9A86A] transition disabled:opacity-30 disabled:hover:text-[#9A9489]"
+                    title="Ver meses recientes"
+                  >
+                    <Icon name="ChevronRight" size={14} />
+                  </button>
+                </div>
+              </div>
+              <DualBarChart data={stats.months} formatValue={formatCOP} bar1Key="revenue" bar2Key="expenses" bar1Color="#C9A86A" bar2Color="#C56B5A" bar1Label="Ingresos" bar2Label="Gastos" />
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-4 mb-2 pt-2 text-[10px] uppercase tracking-wider">
+                <span className="flex items-center gap-1.5 text-[#C9A86A]">
+                  <span className="w-2 h-2 rounded-full bg-[#C9A86A]"></span> Citas
+                </span>
+                <span className="flex items-center gap-1.5 text-[#7FA86A]">
+                  <span className="w-2 h-2 rounded-full bg-[#7FA86A]"></span> Tienda Física
+                </span>
+              </div>
+              <DualBarChart data={stats.weekData} formatValue={formatCOP} bar1Key="bar1" bar2Key="bar2" bar1Color="#C9A86A" bar2Color="#7FA86A" bar1Label="Ingreso Citas" bar2Label="Ingreso Tienda" />
+            </>
+          )}
         </div>
 
         {/* Top clients */}

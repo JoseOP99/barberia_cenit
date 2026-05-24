@@ -184,7 +184,7 @@ export default function InventoryManager() {
                   <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
                     {selectedFiles.map((file, i) => (
                       <div key={`new-${i}`} className="relative w-12 h-12 shrink-0 border border-[#C9A86A]/50 rounded bg-[#1A1816] overflow-hidden">
-                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover mix-blend-screen opacity-90" />
+                        <img src={file.preview} alt="" className="w-full h-full object-cover mix-blend-screen opacity-90" />
                       </div>
                     ))}
                   </div>
@@ -195,7 +195,18 @@ export default function InventoryManager() {
                     type="file" 
                     multiple 
                     accept="image/*"
-                    onChange={e => setSelectedFiles(Array.from(e.target.files))}
+                    onChange={e => {
+                      const files = Array.from(e.target.files);
+                      // Limpiar URLs anteriores de la memoria
+                      selectedFiles.forEach(f => {
+                        if (f.preview) URL.revokeObjectURL(f.preview);
+                      });
+                      // Generar URL de previsualización una sola vez
+                      const filesWithPreview = files.map(file => Object.assign(file, {
+                        preview: URL.createObjectURL(file)
+                      }));
+                      setSelectedFiles(filesWithPreview);
+                    }}
                     className="w-full text-sm text-[#9A9489] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C9A86A]/10 file:text-[#C9A86A] hover:file:bg-[#C9A86A]/20"
                   />
                 </div>
