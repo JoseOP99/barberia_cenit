@@ -32,8 +32,20 @@ export function ProductRow({ p, idx, onOpen }) {
           {[p.material, p.color_name].filter(Boolean).map(v => v.toUpperCase()).join(' · ')}
         </div>
       </div>
-      <div className="text-right shrink-0">
-        <div className="font-mono text-lg" style={{ color: '#E8C77E' }}>{formatCOP(p.price)}</div>
+      <div className="flex flex-col sm:items-end justify-center w-full sm:w-auto mt-2 sm:mt-0 pb-1 sm:pb-0">
+        <div className="font-mono text-lg" style={{ color: '#E8C77E' }}>
+          {p.discount_percentage > 0 ? (
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
+              <span className="text-xs text-[#C56B5A] line-through opacity-80">{formatCOP(p.price)}</span>
+              <span className="flex items-center gap-2">
+                <span className="font-bold">{formatCOP(p.price * (1 - p.discount_percentage / 100))}</span>
+                <span className="text-[10px] bg-[#C56B5A] text-white px-1.5 py-0.5 rounded-sm font-sans tracking-wide sm:hidden">-{p.discount_percentage}%</span>
+              </span>
+            </div>
+          ) : (
+            formatCOP(p.price)
+          )}
+        </div>
         <div className="font-mono text-[10px] mt-1" style={{ color: p.stock === 0 ? '#C56B5A' : '#5A5347' }}>
           {p.stock === 0 ? 'AGOTADO' : `${p.stock} EN STOCK`}
         </div>

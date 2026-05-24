@@ -6,7 +6,12 @@ import { formatCOP } from '../../data/cenitData';
 export function ProductTile({ p, idx, onOpen }) {
   const stockColor = p.stock === 0 ? '#C56B5A' : p.stock < 10 ? '#E8C77E' : '#5A5347';
   return (
-    <button onClick={onOpen} className="text-left corner-deco border p-4 hover:border-[#8B6F3F] transition-all bg-[#141312]" style={{ borderColor: '#2A2530' }}>
+    <button onClick={onOpen} className="text-left corner-deco border p-4 hover:border-[#8B6F3F] transition-all bg-[#141312] relative group" style={{ borderColor: '#2A2530' }}>
+      {p.discount_percentage > 0 && (
+        <div className="absolute top-2 right-2 bg-[#C56B5A] text-white text-[10px] font-black px-2 py-1 rounded-sm z-20 shadow-lg shadow-black/50 tracking-wider transform translate-x-2 -translate-y-2 group-hover:scale-105 transition-transform">
+          -{p.discount_percentage}% OFF
+        </div>
+      )}
       <Corners/>
       <div className="aspect-square flex items-center justify-center relative bg-gradient-to-br from-[#1A1816] to-[#0A0A0A] mb-4">
         {p.tag && (
@@ -32,7 +37,16 @@ export function ProductTile({ p, idx, onOpen }) {
         </div>
         <h4 className="font-display text-lg leading-tight mb-2" style={{ color: '#F1ECDE', fontStyle: 'italic' }}>{p.name}</h4>
         <div className="flex items-baseline justify-between mt-3">
-          <span className="font-mono text-sm" style={{ color: '#E8C77E' }}>{formatCOP(p.price)}</span>
+          <div className="font-mono text-sm" style={{ color: '#E8C77E' }}>
+            {p.discount_percentage > 0 ? (
+              <div className="flex flex-col">
+                <span className="text-[10px] text-[#C56B5A] line-through opacity-80">{formatCOP(p.price)}</span>
+                <span className="font-bold">{formatCOP(p.price * (1 - p.discount_percentage / 100))}</span>
+              </div>
+            ) : (
+              formatCOP(p.price)
+            )}
+          </div>
           <span className="font-mono text-[10px]" style={{ color: stockColor }}>
             {p.stock === 0 ? 'AGOTADO' : p.stock < 10 ? `SOLO ${p.stock}` : 'EN STOCK'}
           </span>

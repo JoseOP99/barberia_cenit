@@ -50,6 +50,12 @@ export function ProductDrawer({ product, onClose, onReserve, isReserving }) {
               </div>
             )}
             
+            {product.discount_percentage > 0 && (
+              <span className="absolute top-6 left-6 font-black text-[12px] px-3 py-1.5 z-10 rounded-sm shadow-xl tracking-widest text-white bg-[#C56B5A]">
+                -{product.discount_percentage}% OFF
+              </span>
+            )}
+            
             {product.tag && (
               <span className="absolute top-6 right-6 font-roman text-[10px] px-3 py-1.5 z-10 rounded-sm"
                 style={{ color: product.tag === 'AGOTADO' ? '#C56B5A' : '#14100A',
@@ -74,7 +80,18 @@ export function ProductDrawer({ product, onClose, onReserve, isReserving }) {
                 {(product.collection || 'Básicos').toUpperCase()} · SKU: {product.id.toUpperCase().split('-')[0]}
               </div>
               <h2 className="font-display text-4xl lg:text-5xl mb-3" style={{ color: '#F1ECDE', fontStyle: 'italic', lineHeight: '1.1' }}>{product.name}</h2>
-              <div className="font-mono text-3xl text-gold mb-8">{formatCOP(product.price)}</div>
+              <div className="font-mono text-3xl text-gold mb-8">
+                {product.discount_percentage > 0 ? (
+                  <div className="flex flex-col">
+                    <span className="text-lg text-[#C56B5A] line-through opacity-80 mb-1">{formatCOP(product.price)}</span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-bold">{formatCOP(product.price * (1 - product.discount_percentage / 100))}</span>
+                    </span>
+                  </div>
+                ) : (
+                  formatCOP(product.price)
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {product.size && <Spec label="Talla" value={product.size} />}

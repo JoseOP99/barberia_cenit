@@ -7,7 +7,7 @@ import { productsService } from '../../services/productsService';
 const INITIAL_FORM = {
   name: '', description: '', price: '', stock: 1, collection: 'Gorra',
   material: '', size: '', color_name: '', color_hex: '#1A1816', accent_hex: '#C9A86A',
-  tag: '', visible: true, image_urls: ''
+  tag: '', visible: true, image_urls: '', discount_percentage: 0
 };
 
 export default function InventoryManager() {
@@ -28,6 +28,7 @@ export default function InventoryManager() {
       collection: p.collection || '', material: p.material || '', size: p.size || 'Ajustable', color_name: p.color_name || '',
       color_hex: p.color_hex || '#1A1816', accent_hex: p.accent_hex || '#C9A86A',
       tag: p.tag || '', visible: p.visible,
+      discount_percentage: p.discount_percentage || 0,
       image_urls: p.product_images ? p.product_images.map(img => img.image_url).join(', ') : ''
     });
     setShowForm(true);
@@ -69,6 +70,7 @@ export default function InventoryManager() {
         stock: Number(form.stock),
         collection: form.collection,
         visible: form.visible,
+        discount_percentage: Number(form.discount_percentage) || 0,
         image_urls: allUrls
       };
       if (editingId) {
@@ -124,7 +126,19 @@ export default function InventoryManager() {
                           <div className="text-xs text-[#6A655C] mt-0.5">{p.collection || 'Básicos'} • {p.color_name || 'Negro'}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-mono text-sm text-[#E8C77E]">{formatCOP(p.price)}</div>
+                          <div className="font-mono text-sm text-[#E8C77E] flex flex-col items-end">
+                            {p.discount_percentage > 0 ? (
+                              <>
+                                <span className="text-[10px] text-[#C56B5A] line-through">{formatCOP(p.price)}</span>
+                                <span className="flex items-center gap-1.5">
+                                  {formatCOP(p.price * (1 - p.discount_percentage / 100))}
+                                  <span className="text-[9px] bg-[#C56B5A] text-white px-1.5 rounded-sm font-sans tracking-wide">-{p.discount_percentage}%</span>
+                                </span>
+                              </>
+                            ) : (
+                              formatCOP(p.price)
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -176,7 +190,19 @@ export default function InventoryManager() {
                       <div className="text-sm text-[#F5F1E8] font-medium">{p.name}</div>
                       <div className="text-xs text-[#6A655C]">{p.collection || 'Básicos'} • {p.color_name || 'Negro'}</div>
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-sm text-[#E8C77E]">{formatCOP(p.price)}</td>
+                    <td className="px-5 py-3.5 font-mono text-sm text-[#E8C77E]">
+                      {p.discount_percentage > 0 ? (
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-[#C56B5A] line-through">{formatCOP(p.price)}</span>
+                          <span className="flex items-center gap-1.5">
+                            {formatCOP(p.price * (1 - p.discount_percentage / 100))}
+                            <span className="text-[9px] bg-[#C56B5A] text-white px-1.5 rounded-sm font-sans tracking-wide">-{p.discount_percentage}%</span>
+                          </span>
+                        </div>
+                      ) : (
+                        formatCOP(p.price)
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 font-mono text-sm">
                       <span className={p.stock === 0 ? 'text-red-400' : 'text-[#F5F1E8]'}>{p.stock}</span>
                     </td>
@@ -262,19 +288,28 @@ export default function InventoryManager() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#9A9489] mb-1">Precio *</label>
+                <label className="block text-xs text-[#9A9489] mb-1">Precio Original *</label>
                 <input required type="number" min="0" value={form.price} onChange={e => setForm({...form, price: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-white/[0.04] pt-4">
+              <div className="md:col-span-1">
+                <label className="block text-xs text-[#C56B5A] font-semibold mb-1">Descuento (%)</label>
+                <div className="relative">
+                  <input type="number" min="0" max="100" value={form.discount_percentage || ''} onChange={e => setForm({...form, discount_percentage: e.target.value})}
+                    placeholder="0"
+                    className="w-full bg-red-500/[0.05] border border-red-500/20 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:border-red-500 outline-none" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-400 font-bold">%</span>
+                </div>
+              </div>
+              <div className="md:col-span-1">
                 <label className="block text-xs text-[#9A9489] mb-1">Stock *</label>
                 <input required type="number" min="0" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs text-[#9A9489] mb-1">Colección</label>
                 <input list="colecciones" value={form.collection} onChange={e => setForm({...form, collection: e.target.value})}
                   className="w-full bg-[#1A1816] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none"
@@ -286,6 +321,9 @@ export default function InventoryManager() {
                   <option value="Edición Limitada" />
                 </datalist>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Color Base</label>
                 <input list="colores" value={form.color_name} onChange={e => {
