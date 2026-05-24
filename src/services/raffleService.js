@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import notificationService from './notificationService';
 import customerService from './customerService';
 import { notificationService } from './notificationService';
 
