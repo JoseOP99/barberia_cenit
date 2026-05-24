@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import notificationService from './notificationService';
+import { getEmailTemplate } from '../utils/emailTemplate';
 
 const handleError = (error, context) => {
   const errorMessage = error?.message || 'Error desconocido';
@@ -124,7 +126,54 @@ export const appointmentsService = {
         `);
 
       if (error) handleError(error, 'createAppointment');
-      return data?.[0];
+      
+      const newAppt = data?.[0];
+
+      if (newAppt) {
+        // Enviar correos si hay user_id (para sacar el email) o si tenemos un email
+        if (newAppt.user_id) {
+          const { data: profile } = await supabase.from('profiles').select('email').eq('id', newAppt.user_id).single();
+          if (profile?.email) {
+            notificationService.sendEmail({
+              to: profile.email,
+              subject: 'Reserva Confirmada: ' + newAppt.services?.name,
+              html: getEmailTemplate(
+                '¡Cita Confirmada!',
+                `<p style="margin-bottom: 15px;">Hola <b>${newAppt.client_name}</b>, hemos agendado tu cita exitosamente.</p>
+                 <div style="background-color: #1A1816; border: 1px solid #2A2530; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                   <p style="color: #9A9489; margin: 5px 0;"><b>Servicio:</b> ${newAppt.services?.name || 'Servicio de Barbería'}</p>
+                   <p style="color: #9A9489; margin: 5px 0;"><b>Barbero:</b> ${newAppt.barbers?.name || 'Barbero asignado'}</p>
+                   <p style="color: #9A9489; margin: 5px 0;"><b>Fecha:</b> ${newAppt.appointment_date}</p>
+                   <p style="color: #9A9489; margin: 5px 0;"><b>Hora:</b> ${newAppt.appointment_time}</p>
+                 </div>
+                 <p style="color: #C56B5A; font-weight: bold; margin-top: 15px;">⚠️ Recuerda llegar 5 minutos antes de tu cita.</p>`,
+                'https://cenit-barber.vercel.app/perfil',
+                'Ver Mis Citas'
+              )
+            });
+          }
+        }
+
+        // Correo a Nando
+        notificationService.sendEmail({
+          to: 'barbercenit@gmail.com', // Correo del admin
+          subject: 'Nueva cita agendada: ' + newAppt.client_name,
+          html: getEmailTemplate(
+            'Nueva Cita Agendada',
+            `<p>Tienes una nueva reserva en el sistema:</p>
+             <ul style="list-style: none; padding: 0; margin: 15px 0;">
+               <li style="margin-bottom: 8px;"><b>Cliente:</b> ${newAppt.client_name} (${newAppt.client_phone})</li>
+               <li style="margin-bottom: 8px;"><b>Servicio:</b> ${newAppt.services?.name || 'Servicio de Barbería'}</li>
+               <li style="margin-bottom: 8px;"><b>Barbero:</b> ${newAppt.barbers?.name || 'No especificado'}</li>
+               <li style="margin-bottom: 8px;"><b>Fecha:</b> ${newAppt.appointment_date} a las ${newAppt.appointment_time}</li>
+             </ul>`,
+            'https://cenit-barber.vercel.app/admin/calendar',
+            'Ver Calendario'
+          )
+        });
+      }
+
+      return newAppt;
     } catch (err) {
       handleError(err, 'createAppointment');
     }

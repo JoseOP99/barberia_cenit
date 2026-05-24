@@ -1,4 +1,7 @@
 import { supabase } from './supabaseClient';
+import { notificationService } from './notificationService';
+import { customerService } from './customerService';
+import { getEmailTemplate } from '../utils/emailTemplate';
 
 const handleError = (error, context) => {
   const errorMessage = error?.message || 'Error desconocido';
@@ -196,6 +199,8 @@ export const productsService = {
 
       const { image_urls, ...productData } = updates;
 
+      const { data: oldProduct } = await supabase.from('products').select('discount_percentage, name, price').eq('id', id).single();
+
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -206,6 +211,31 @@ export const productsService = {
         .select();
 
       if (error) handleError(error, 'updateProduct');
+
+      if (oldProduct && (oldProduct.discount_percentage || 0) === 0 && productData.discount_percentage > 0) {
+        const customers = await customerService.getAllCustomers();
+        const emails = customers.map(c => c.email).filter(Boolean);
+        if (emails.length > 0) {
+          const newPrice = productData.price * (1 - productData.discount_percentage / 100);
+          notificationService.sendEmail({
+            bcc: emails,
+            subject: `¡Promoción Especial! ${productData.discount_percentage}% OFF en ${productData.name} 🎉`,
+            html: getEmailTemplate(
+              '¡Tenemos un descuento especial para ti!',
+              `<p style="text-align: center;">Acabamos de rebajar nuestro producto estrella:</p>
+               <div style="background-color: #1A1816; padding: 20px; border: 1px solid #C9A86A; border-radius: 8px; margin: 20px 0; text-align: center;">
+                 <h2 style="color: #E8C77E; margin:0; font-size: 20px;">${productData.name}</h2>
+                 <p style="font-size: 18px; margin: 15px 0 0 0;">
+                   <span style="display: block; font-size: 14px; color: #9A9489; margin-bottom: 5px;">Precio original: <del style="color: #C56B5A; opacity: 0.8;">$${productData.price.toLocaleString('es-CO')}</del></span>
+                   <b style="color: #F1ECDE; font-size: 22px;">¡Llévalo por: $${newPrice.toLocaleString('es-CO')}!</b> <span style="color: #C9A86A; font-weight: bold;">(-${productData.discount_percentage}%)</span>
+                 </p>
+               </div>`,
+              'https://cenit-barber.vercel.app/tienda',
+              'Aprovechar Promoción'
+            )
+          }); // Ejecutar de fondo sin esperar
+        }
+      }
 
       if (image_urls !== undefined) {
         await supabase.from('product_images').delete().eq('product_id', id);

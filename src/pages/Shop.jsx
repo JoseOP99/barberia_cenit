@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icon, Corners, Sunburst } from '../components/Shared';
 import { formatCOP, CONTACT_INFO } from '../data/cenitData';
 import useProducts from '../hooks/useProducts';
@@ -40,6 +40,26 @@ export default function Shop({ onAddToCart = () => {} }) {
     return list;
   }, [dbProducts, search, filters, sort]);
 
+  const handleOpenProduct = (p) => {
+    setActive(p);
+    window.history.pushState({ productModal: true }, '');
+  };
+
+  const handleCloseProduct = () => {
+    setActive(null);
+    if (window.history.state?.productModal) {
+      window.history.back();
+    }
+  };
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (active) setActive(null);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [active]);
+
   const handleReserve = async (product) => {
     if (!isLoggedIn) {
       navigate('/auth?redirect=/tienda');
@@ -54,7 +74,7 @@ export default function Shop({ onAddToCart = () => {} }) {
       const waUrl = `${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
 
-      setActive(null);
+      handleCloseProduct();
       fetchProducts(); // Recargar stock real
     } catch (err) {
       alert(err.message);
@@ -173,18 +193,18 @@ export default function Shop({ onAddToCart = () => {} }) {
               </div>
             ) : layout === 'grid' ? (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-                {items.map((p, i) => <ProductTile key={p.id} p={p} idx={i} onOpen={() => setActive(p)}/>)}
+                {items.map((p, i) => <ProductTile key={p.id} p={p} idx={i} onOpen={() => handleOpenProduct(p)}/>)}
               </div>
             ) : (
               <div className="space-y-3">
-                {items.map((p, i) => <ProductRow key={p.id} p={p} idx={i} onOpen={() => setActive(p)}/>)}
+                {items.map((p, i) => <ProductRow key={p.id} p={p} idx={i} onOpen={() => handleOpenProduct(p)}/>)}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {active && <ProductDrawer product={active} onClose={() => setActive(null)} onReserve={() => handleReserve(active)} isReserving={reserving}/>}
+      {active && <ProductDrawer product={active} onClose={handleCloseProduct} onReserve={() => handleReserve(active)} isReserving={reserving}/>}
     </div>
   );
 }
