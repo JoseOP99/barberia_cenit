@@ -88,14 +88,14 @@ function LoginForm({ onSwitchTab }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <InputField
-        label="Correo electrónico"
+        label="Correo electrónico o Teléfono"
         id="login-email"
-        type="email"
+        type="text"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="tu@correo.com"
+        placeholder="tu@correo.com o 300 123 4567"
         required
-        autoComplete="email"
+        autoComplete="username"
       />
       <div className="relative">
         <InputField

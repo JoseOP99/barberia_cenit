@@ -6,6 +6,19 @@ export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [editForm, setEditForm] = useState({ first_name: '', first_lastname: '', email: '', phone: '' });
+
+  useEffect(() => {
+    if (editingCustomer) {
+      setEditForm({
+        first_name: editingCustomer.first_name || '',
+        first_lastname: editingCustomer.first_lastname || '',
+        email: editingCustomer.email || '',
+        phone: editingCustomer.phone || ''
+      });
+    }
+  }, [editingCustomer]);
 
   useEffect(() => {
     loadCustomers();
@@ -43,6 +56,26 @@ export default function CustomerManager() {
       } catch (err) {
         alert(err.message);
       }
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const updates = {};
+      if (editForm.first_name !== editingCustomer.first_name) updates.first_name = editForm.first_name;
+      if (editForm.first_lastname !== editingCustomer.first_lastname) updates.first_lastname = editForm.first_lastname;
+      if (editForm.email !== editingCustomer.email) updates.email = editForm.email;
+      if (editForm.phone !== editingCustomer.phone) updates.phone = editForm.phone;
+
+      if (Object.keys(updates).length > 0) {
+        await customerService.updateCustomerProfile(editingCustomer.id, updates);
+      }
+      
+      setEditingCustomer(null);
+      loadCustomers();
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -123,6 +156,9 @@ export default function CustomerManager() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-right space-x-2">
+                    <button onClick={() => setEditingCustomer(c)} className="p-2 text-[#9A9489] hover:text-[#C9A86A] transition-colors" title="Editar cliente">
+                      <Icon name="Edit" size={14} />
+                    </button>
                     {c.no_show_count > 0 && (
                       <button onClick={() => handleResetStrikes(c)} className="p-2 text-[#9A9489] hover:text-[#7FA86A] transition-colors" title="Perdonar faltas (Reset 0)">
                         <Icon name="RotateCcw" size={14} />
@@ -141,6 +177,78 @@ export default function CustomerManager() {
           </tbody>
         </table>
       </div>
+
+      {editingCustomer && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#1A1816] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-white/[0.08] flex justify-between items-center">
+              <h3 className="text-lg font-medium text-[#F5F1E8]">Editar Cliente</h3>
+              <button onClick={() => setEditingCustomer(null)} className="text-[#9A9489] hover:text-white transition-colors">
+                <Icon name="X" size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-[#9A9489] uppercase tracking-wider">Nombre</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.first_name}
+                    onChange={e => setEditForm({ ...editForm, first_name: e.target.value })}
+                    className="w-full bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-[#9A9489] uppercase tracking-wider">Apellido</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.first_lastname}
+                    onChange={e => setEditForm({ ...editForm, first_lastname: e.target.value })}
+                    className="w-full bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-[#9A9489] uppercase tracking-wider">Correo Electrónico</label>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-[#9A9489] uppercase tracking-wider">Teléfono</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full bg-[#1A1816] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-[#F5F1E8] focus:border-[#C9A86A]/50 focus:ring-1 focus:ring-[#C9A86A]/50 outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingCustomer(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[#F5F1E8] bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[#1A1408] bg-[#C9A86A] hover:bg-[#E8C77E] transition-colors"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

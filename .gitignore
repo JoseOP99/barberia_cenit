@@ -57,3 +57,6 @@ secrets/
 
 # Local scripts
 run-migration.js
+setup-rpc.cjs
+check-db.js
+check-supabase.js

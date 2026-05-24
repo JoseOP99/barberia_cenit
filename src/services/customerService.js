@@ -39,6 +39,39 @@ export const customerService = {
       handleError(err, 'updateCustomerStatus');
     }
   },
+
+  async updateCustomerProfile(userId, updates) {
+    try {
+      if (!userId || !updates) throw new Error('Parámetros inválidos');
+      
+      const { email, ...otherUpdates } = updates;
+
+      // Si se está cambiando el correo, usar la función RPC segura para actualizar tanto en auth como en profiles
+      if (email) {
+        const { error: rpcError } = await supabase.rpc('admin_update_user_email', {
+          target_user_id: userId,
+          new_email: email
+        });
+        if (rpcError) handleError(rpcError, 'updateCustomerProfile (RPC)');
+      }
+
+      // Si hay otras actualizaciones además del correo
+      if (Object.keys(otherUpdates).length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ ...otherUpdates, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+
+        if (error) handleError(error, 'updateCustomerProfile');
+      }
+
+      // Devolver el perfil actualizado completo
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      return data;
+    } catch (err) {
+      handleError(err, 'updateCustomerProfile');
+    }
+  },
   
   async resetStrikes(userId) {
     try {

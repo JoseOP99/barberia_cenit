@@ -6,7 +6,22 @@ const handleError = (error, context) => {
   throw new Error(errorMessage);
 };
 
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateEmail = (email) => {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  
+  const domain = email.split('@')[1]?.toLowerCase();
+  const invalidDomains = [
+    'gmai.com', 'gmil.com', 'gmail.con', 'gmail.co', 'gemail.com',
+    'hotmai.com', 'hotmil.com', 'hotmail.con', 'hotmail.co',
+    'yaho.com', 'yahoo.con', 'oulook.com', 'outlok.com'
+  ];
+  
+  if (invalidDomains.includes(domain)) {
+    throw new Error(`El dominio @${domain} parece estar mal escrito. Verifica que sea correcto (ej. @gmail.com, @hotmail.com).`);
+  }
+  
+  return true;
+};
 
 export const authService = {
   /**
@@ -19,6 +34,17 @@ export const authService = {
       if (!validateEmail(email)) throw new Error('Email inválido');
       if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
       if (!first_name || !first_lastname) throw new Error('Nombre y apellido son requeridos');
+
+      // Prevenir duplicados de teléfono e identificación
+      if (phone) {
+        const { data } = await supabase.from('profiles').select('id').eq('phone', phone).limit(1);
+        if (data && data.length > 0) throw new Error('Este número de teléfono ya está registrado por otro usuario');
+      }
+      
+      if (identification) {
+        const { data } = await supabase.from('profiles').select('id').eq('identification', identification).limit(1);
+        if (data && data.length > 0) throw new Error('Esta identificación ya se encuentra registrada');
+      }
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -43,10 +69,44 @@ export const authService = {
     }
   },
 
-  async signIn(email, password) {
+  async signIn(identifier, password) {
     try {
-      if (!email || !password) throw new Error('Email y contraseña son requeridos');
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!identifier || !password) throw new Error('Email/Teléfono y contraseña son requeridos');
+      
+      let emailToLogin = identifier.trim();
+
+      // Si no contiene '@', asumimos que es un número de teléfono
+      if (!emailToLogin.includes('@')) {
+        const searchClean = identifier.replace(/\D/g, ''); 
+        if (searchClean.length < 7) {
+          throw new Error('Por favor ingresa un correo o número de teléfono válido.');
+        }
+        
+        // Obtenemos perfiles para buscar coincidencia
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('email, phone')
+          .not('phone', 'is', null);
+
+        if (profileError || !profiles) {
+          throw new Error('No se pudo verificar el número de teléfono.');
+        }
+
+        // Filtramos buscando que el teléfono termine con los dígitos ingresados (ignorando código de país si no lo puso)
+        const matchedProfile = profiles.find(p => {
+          if (!p.phone) return false;
+          const pPhoneClean = p.phone.replace(/\D/g, '');
+          return pPhoneClean.endsWith(searchClean);
+        });
+
+        if (!matchedProfile) {
+          throw new Error('No se encontró una cuenta con ese número de teléfono.');
+        }
+        
+        emailToLogin = matchedProfile.email;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email: emailToLogin, password });
       if (error) handleError(error, 'signIn');
 
       // Verificar si el usuario está bloqueado
