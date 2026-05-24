@@ -19,6 +19,14 @@ function getMonthLabel(key) {
   return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
 }
 
+// Helper para obtener fecha local en formato YYYY-MM-DD sin errores de zona horaria UTC
+function getLocalDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // ─── KPI Card ───
 function KPICard({ label, value, icon, subValue, trend, valueClass = 'text-[#F5F1E8]' }) {
   return (
@@ -115,8 +123,8 @@ export default function DashboardView() {
     try {
       const today = new Date();
       const yearAgo = new Date(today.getFullYear(), today.getMonth() - 11, 1);
-      const startDate = yearAgo.toISOString().split('T')[0];
-      const endDate = today.toISOString().split('T')[0];
+      const startDate = getLocalDateString(yearAgo);
+      const endDate = getLocalDateString(today);
 
       const [appts, sales, exp] = await Promise.all([
         appointmentsService.getAllAppointments(),
@@ -148,7 +156,7 @@ export default function DashboardView() {
   };
 
   const handleCloseDay = async (status) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     const pendings = allAppointments.filter(c =>
       c.appointment_date === todayStr && ['pending', 'confirmed', 'in-chair'].includes(c.status)
     );
@@ -168,7 +176,7 @@ export default function DashboardView() {
   // ─── Computed stats ───
   const stats = useMemo(() => {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
     // Today Appointments
@@ -214,7 +222,7 @@ export default function DashboardView() {
     const prevMonthWalkins = allSales.filter(s => getMonthKey(s.date) === prevMonthKey);
     const prevMonthWalkinRevenue = prevMonthWalkins.reduce((s, a) => s + (a.quantity * a.price_per_unit), 0);
     const prevMonthRevenue = prevMonthApptRevenue + prevMonthWalkinRevenue;
-    const revenueTrend = prevMonthRevenue > 0 ? Math.round(((monthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100) : 0;
+    const revenueTrend = prevMonthRevenue > 0 ? Math.round(((monthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100) : null;
 
     // Financial chart logic (supports offset)
     const months = [];
@@ -321,7 +329,8 @@ export default function DashboardView() {
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <KPICard label="Ingreso Bruto" value={formatCOP(stats.monthRevenue)} icon="TrendingUp"
-            trend={stats.revenueTrend} subValue="vs mes anterior" />
+            trend={stats.revenueTrend !== null ? stats.revenueTrend : undefined} 
+            subValue={stats.revenueTrend !== null ? "vs mes anterior" : "Sin histórico previo"} />
           <KPICard label="Gastos" value={formatCOP(stats.monthExpenses)} icon="Receipt" valueClass="text-[#C56B5A]" />
           <KPICard label="Ganancia Neta" value={formatCOP(stats.monthProfit)} icon="Wallet" valueClass={stats.monthProfit >= 0 ? 'text-[#7FA86A]' : 'text-[#C56B5A]'} />
           <KPICard label="Clientes únicos" value={String(stats.totalClients)} icon="Users" subValue="histórico de citas" />
