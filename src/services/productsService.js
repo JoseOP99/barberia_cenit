@@ -37,7 +37,6 @@ export const productsService = {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Comprimir a formato WebP (el más ligero) al 70% de calidad
             canvas.toBlob((blob) => {
               resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
                 type: 'image/webp',
@@ -45,7 +44,14 @@ export const productsService = {
               }));
             }, 'image/webp', 0.7);
           };
+          img.onerror = () => resolve(file); // Si falla al cargar, devolver original
         };
+        reader.onerror = () => resolve(file); // Si falla al leer, devolver original
+        try {
+          reader.readAsDataURL(file);
+        } catch (e) {
+          resolve(file);
+        }
       });
     };
 

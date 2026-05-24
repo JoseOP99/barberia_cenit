@@ -17,9 +17,11 @@ export default function InventoryManager() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = React.useRef(null);
 
   const handleEdit = (p) => {
     setEditingId(p.id);
+    selectedFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
     setSelectedFiles([]);
     setForm({
       name: p.name, description: p.description || '', price: p.price, stock: p.stock,
@@ -41,8 +43,10 @@ export default function InventoryManager() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
+    selectedFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
     setSelectedFiles([]);
     setForm(INITIAL_FORM);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
@@ -51,7 +55,8 @@ export default function InventoryManager() {
     try {
       let uploadedUrls = [];
       if (selectedFiles.length > 0) {
-        uploadedUrls = await productsService.uploadImages(selectedFiles);
+        const filesToUpload = selectedFiles.map(sf => sf.file);
+        uploadedUrls = await productsService.uploadImages(filesToUpload);
       }
 
       const existingUrls = form.image_urls ? form.image_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
@@ -105,7 +110,52 @@ export default function InventoryManager() {
           </div>
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-            <table className="w-full text-left">
+            {/* ─── VISTA MÓVIL (TARJETAS) ─── */}
+            <div className="block md:hidden">
+              {products.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-[#6A655C]">No hay productos en el inventario.</div>
+              ) : (
+                <div className="divide-y divide-white/[0.06]">
+                  {products.map(p => (
+                    <div key={p.id} className="p-4 flex flex-col gap-3 hover:bg-white/[0.02] transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-sm text-[#F5F1E8] font-medium leading-tight">{p.name}</div>
+                          <div className="text-xs text-[#6A655C] mt-0.5">{p.collection || 'Básicos'} • {p.color_name || 'Negro'}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono text-sm text-[#E8C77E]">{formatCOP(p.price)}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-mono ${p.stock === 0 ? 'text-red-400' : 'text-[#F5F1E8]'}`}>
+                            Stock: {p.stock}
+                          </span>
+                          <span className={`inline-flex px-2 py-0.5 text-[9px] tracking-wider uppercase rounded-full border ${
+                            p.visible ? 'text-[#7FA86A] bg-[#7FA86A]/10 border-[#7FA86A]/30' : 'text-[#6A655C] bg-white/[0.03] border-white/[0.06]'
+                          }`}>
+                            {p.visible ? 'Visible' : 'Oculto'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleEdit(p)} className="p-2 bg-white/[0.03] rounded-lg text-[#9A9489] hover:text-[#C9A86A] active:scale-95 transition-all" title="Editar">
+                            <Icon name="Edit2" size={14} />
+                          </button>
+                          <button onClick={() => handleHardDelete(p.id)} className="p-2 bg-white/[0.03] rounded-lg text-[#9A9489] hover:text-red-400 active:scale-95 transition-all" title="Eliminar">
+                            <Icon name="Trash2" size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ─── VISTA ESCRITORIO (TABLA) ─── */}
+            <table className="w-full text-left hidden md:table">
               <thead>
                 <tr className="border-b border-white/[0.06]">
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Producto</th>
@@ -152,7 +202,7 @@ export default function InventoryManager() {
           </div>
         </>
       ) : (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 max-w-2xl">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-6 w-full max-w-2xl mx-auto">
           <h3 className="text-lg font-medium text-[#F5F1E8] mb-6">{editingId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -195,17 +245,17 @@ export default function InventoryManager() {
                     type="file" 
                     multiple 
                     accept="image/*"
+                    ref={fileInputRef}
                     onChange={e => {
                       const files = Array.from(e.target.files);
-                      // Limpiar URLs anteriores de la memoria
                       selectedFiles.forEach(f => {
                         if (f.preview) URL.revokeObjectURL(f.preview);
                       });
-                      // Generar URL de previsualización una sola vez
-                      const filesWithPreview = files.map(file => Object.assign(file, {
+                      const newFiles = files.map(file => ({
+                        file,
                         preview: URL.createObjectURL(file)
                       }));
-                      setSelectedFiles(filesWithPreview);
+                      setSelectedFiles(newFiles);
                     }}
                     className="w-full text-sm text-[#9A9489] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C9A86A]/10 file:text-[#C9A86A] hover:file:bg-[#C9A86A]/20"
                   />

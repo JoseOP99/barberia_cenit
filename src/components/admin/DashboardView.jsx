@@ -530,70 +530,117 @@ export default function DashboardView() {
         {stats.todayCitas.length === 0 ? (
           <div className="p-8 text-center text-[#6A655C] text-sm">No hay citas programadas para hoy.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Hora</th>
-                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Cliente</th>
-                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Servicio</th>
-                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Estado</th>
-                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.todayCitas
-                  .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
-                  .map(a => (
-                  <tr key={a.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="font-mono text-sm text-[#E8C77E]">{a.appointment_time?.slice(0, 5)}</div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="text-sm text-[#F5F1E8]">
-                        {a.guest_name ? (
-                          <>{a.guest_name} <span className="text-xs text-[#6A655C]">(de {a.client_name})</span></>
-                        ) : a.client_name}
+          <>
+            {/* ─── VISTA MÓVIL (TARJETAS) ─── */}
+            <div className="block lg:hidden divide-y divide-white/[0.06]">
+              {stats.todayCitas
+                .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
+                .map(a => (
+                  <div key={a.id} className="p-4 flex flex-col gap-3 hover:bg-white/[0.02] transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-mono text-lg text-[#E8C77E] leading-none mb-1.5">{a.appointment_time?.slice(0, 5)}</div>
+                        <div className="text-sm text-[#F5F1E8] font-medium leading-tight">
+                          {a.guest_name ? (
+                            <>{a.guest_name} <span className="text-xs font-normal text-[#6A655C]">(de {a.client_name})</span></>
+                          ) : a.client_name}
+                        </div>
+                        <div className="text-xs text-[#9A9489] mt-0.5">{a.client_phone}</div>
                       </div>
-                      <div className="text-xs text-[#9A9489]">{a.client_phone}</div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="text-sm text-[#F5F1E8]">{a.services?.name || 'Servicio'}</div>
-                      <div className="text-xs text-[#C9A86A]">{formatCOP(a.services?.price || 0)}</div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex px-2.5 py-1 text-[10px] tracking-wider uppercase rounded-full border ${STATUS_MAP[a.status]?.cls || STATUS_MAP.pending.cls}`}>
-                        {STATUS_MAP[a.status]?.label || a.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {['pending', 'confirmed', 'in-chair'].includes(a.status) && (
-                          <>
-                            <button onClick={() => handleUpdateStatus(a.id, 'completed')} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Completar">
-                              <Icon name="CheckCircle" size={14} />
-                              <span className="hidden sm:inline">Realizado</span>
-                            </button>
-                            <button onClick={() => handleUpdateStatus(a.id, 'cancelled')} className="p-1.5 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Cancelar">
-                              <Icon name="X" size={14} />
-                              <span className="hidden sm:inline">Cancelar</span>
-                            </button>
-                            <button onClick={() => handleUpdateStatus(a.id, 'no-show')} className="p-1.5 bg-orange-500/10 text-orange-400 rounded hover:bg-orange-500/20 transition flex items-center gap-1.5 text-xs px-2" title="No Show">
-                              <Icon name="UserMinus" size={14} />
-                              <span className="hidden xl:inline">No Show</span>
-                            </button>
-                          </>
-                        )}
-                        <button onClick={() => handleDelete(a.id)} className="p-1.5 text-[#6A655C] hover:text-red-400 rounded hover:bg-red-500/10 transition ml-2" title="Eliminar">
-                          <Icon name="Trash2" size={14} />
-                        </button>
+                      <div className="text-right flex flex-col items-end gap-1.5">
+                        <span className={`inline-flex px-2 py-0.5 text-[9px] tracking-wider uppercase rounded-full border ${STATUS_MAP[a.status]?.cls || STATUS_MAP.pending.cls}`}>
+                          {STATUS_MAP[a.status]?.label || a.status}
+                        </span>
+                        <div className="text-sm text-[#F5F1E8]">{a.services?.name || 'Servicio'}</div>
+                        <div className="text-xs text-[#C9A86A]">{formatCOP(a.services?.price || 0)}</div>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                    
+                    <div className="flex items-center justify-end gap-2 mt-1 pt-3 border-t border-white/[0.04]">
+                      {['pending', 'confirmed', 'in-chair'].includes(a.status) && (
+                        <>
+                          <button onClick={() => handleUpdateStatus(a.id, 'completed')} className="flex-1 justify-center py-2 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition flex items-center gap-1.5 text-xs font-medium" title="Completar">
+                            <Icon name="CheckCircle" size={14} /> Realizado
+                          </button>
+                          <button onClick={() => handleUpdateStatus(a.id, 'cancelled')} className="p-2 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center justify-center text-xs" title="Cancelar">
+                            <Icon name="X" size={16} />
+                          </button>
+                        </>
+                      )}
+                      <button onClick={() => handleDelete(a.id)} className="p-2 text-[#6A655C] hover:text-red-400 rounded hover:bg-red-500/10 transition flex items-center justify-center" title="Eliminar">
+                        <Icon name="Trash2" size={16} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </div>
+
+            {/* ─── VISTA ESCRITORIO (TABLA) ─── */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Hora</th>
+                    <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Cliente</th>
+                    <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Servicio</th>
+                    <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Estado</th>
+                    <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.todayCitas
+                    .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
+                    .map(a => (
+                    <tr key={a.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="font-mono text-sm text-[#E8C77E]">{a.appointment_time?.slice(0, 5)}</div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="text-sm text-[#F5F1E8]">
+                          {a.guest_name ? (
+                            <>{a.guest_name} <span className="text-xs text-[#6A655C]">(de {a.client_name})</span></>
+                          ) : a.client_name}
+                        </div>
+                        <div className="text-xs text-[#9A9489]">{a.client_phone}</div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="text-sm text-[#F5F1E8]">{a.services?.name || 'Servicio'}</div>
+                        <div className="text-xs text-[#C9A86A]">{formatCOP(a.services?.price || 0)}</div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex px-2.5 py-1 text-[10px] tracking-wider uppercase rounded-full border ${STATUS_MAP[a.status]?.cls || STATUS_MAP.pending.cls}`}>
+                          {STATUS_MAP[a.status]?.label || a.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {['pending', 'confirmed', 'in-chair'].includes(a.status) && (
+                            <>
+                              <button onClick={() => handleUpdateStatus(a.id, 'completed')} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Completar">
+                                <Icon name="CheckCircle" size={14} />
+                                <span className="hidden sm:inline">Realizado</span>
+                              </button>
+                              <button onClick={() => handleUpdateStatus(a.id, 'cancelled')} className="p-1.5 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center gap-1.5 text-xs px-2" title="Cancelar">
+                                <Icon name="X" size={14} />
+                                <span className="hidden sm:inline">Cancelar</span>
+                              </button>
+                              <button onClick={() => handleUpdateStatus(a.id, 'no-show')} className="p-1.5 bg-orange-500/10 text-orange-400 rounded hover:bg-orange-500/20 transition flex items-center gap-1.5 text-xs px-2" title="No Show">
+                                <Icon name="UserMinus" size={14} />
+                                <span className="hidden xl:inline">No Show</span>
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => handleDelete(a.id)} className="p-1.5 text-[#6A655C] hover:text-red-400 rounded hover:bg-red-500/10 transition ml-2" title="Eliminar">
+                            <Icon name="Trash2" size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
