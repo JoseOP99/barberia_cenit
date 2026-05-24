@@ -85,7 +85,7 @@ export const authService = {
 
         // Correo a Nando
         notificationService.sendEmail({
-          to: 'barbercenit@gmail.com', // O el correo del admin que definas
+          to: 'barbercenit@gmail.com, nandom0201@gmail.com', // O el correo del admin que definas
           subject: 'Nuevo cliente registrado: ' + first_name + ' ' + first_lastname,
           html: getEmailTemplate(
             'Nuevo Registro',

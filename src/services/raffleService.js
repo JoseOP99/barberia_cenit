@@ -264,7 +264,7 @@ export const raffleService = {
 
       // Correo a Nando informando del ganador
       notificationService.sendEmail({
-        to: 'barbercenit@gmail.com', // Admin
+        to: 'barbercenit@gmail.com, nandom0201@gmail.com', // Admin
         subject: 'Sorteo finalizado: Tenemos un ganador',
         html: getEmailTemplate(
           'Sorteo Finalizado',

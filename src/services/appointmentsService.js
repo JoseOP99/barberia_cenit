@@ -156,7 +156,7 @@ export const appointmentsService = {
 
         // Correo a Nando
         notificationService.sendEmail({
-          to: 'barbercenit@gmail.com', // Correo del admin
+          to: 'barbercenit@gmail.com, nandom0201@gmail.com', // Correo del admin
           subject: 'Nueva cita agendada: ' + newAppt.client_name,
           html: getEmailTemplate(
             'Nueva Cita Agendada',
