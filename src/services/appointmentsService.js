@@ -68,7 +68,7 @@ export const appointmentsService = {
       // 1. Obtener citas agendadas con hora de inicio y fin
       let query = supabase
         .from('appointments')
-        .select('appointment_time, end_time, service_id')
+        .select('appointment_time, end_time, service_id, client_name')
         .eq('appointment_date', date)
         .in('status', ['pending', 'confirmed']);
 

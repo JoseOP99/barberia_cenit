@@ -41,7 +41,10 @@ export default function Booking() {
           barbersService.getAllBarbers(false)
         ]);
         setServices(s || []);
-        if (s && s.length > 0) setSelectedServiceId(s[0].id);
+        if (s && s.length > 0) {
+          const defaultService = s.find(srv => srv.name.toLowerCase().includes('corte')) || s[0];
+          setSelectedServiceId(defaultService.id);
+        }
         if (b && b.length > 0) setBarber(b[0]);
       } catch (err) {
         console.error("Error cargando datos en Booking:", err);
@@ -285,6 +288,7 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
         if (slotEndMins <= shopCloseMins) {
           // Calcular si hay solapamiento con citas existentes
           let overlappingCount = 0;
+          let overlappingClients = [];
           for (const appt of bookedSlots) {
             if (!appt.appointment_time || !appt.end_time) continue;
             
@@ -296,6 +300,9 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
             // Verifica solapamiento (tiempo superpuesto)
             if (Math.max(slotStartMins, apptStartMins) < Math.min(slotEndMins, apptEndMins)) {
               overlappingCount++;
+              if (appt.client_name) {
+                overlappingClients.push(appt.client_name.split(' ')[0]);
+              }
             }
           }
 
@@ -315,7 +322,7 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
           }
 
           if (overlappingCount < capacity && !hitsBlock) {
-            slots.push(timeStr);
+            slots.push({ time: timeStr, clients: overlappingClients });
           }
         }
       }
@@ -395,11 +402,16 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
                 <div className="grid grid-cols-3 gap-2">
                   {slots.map(s => (
                     <button
-                      key={s}
-                      onClick={() => onTime(s)}
-                      className={`slot rounded-lg font-mono ${time === s ? 'active' : ''}`}
+                      key={s.time}
+                      onClick={() => onTime(s.time)}
+                      className={`slot rounded-lg font-mono flex flex-col items-center justify-center p-2 min-h-[48px] ${time === s.time ? 'active' : ''}`}
                     >
-                      {s}
+                      <span>{s.time}</span>
+                      {s.clients && s.clients.length > 0 && (
+                        <span className="text-[10px] text-[#C9A86A] mt-1 leading-none text-center truncate w-full px-1">
+                          {s.clients.join(', ')}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
