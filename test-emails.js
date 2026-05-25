@@ -1,3 +1,4 @@
+/* eslint-env node */
 import nodemailer from 'nodemailer';
 import { config } from 'dotenv';
 import { buildEmailContent } from './api/utils/emailBuilder.js';

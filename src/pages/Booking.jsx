@@ -170,7 +170,7 @@ export default function Booking() {
             <SuccessView service={service} date={date} time={time} contact={contact} onReset={reset} />
           ) : (
             <>
-              {step === 0 && <DateTimeStep date={date} time={time} onDate={setDate} onTime={setTime} barberId={barber?.id} />}
+              {step === 0 && <DateTimeStep date={date} time={time} onDate={setDate} onTime={setTime} barberId={barber?.id} service={service} />}
               {step === 1 && <ContactStep contact={contact} onChange={setContact} summary={{ service, date, time }} error={errorSubmit} />}
 
               <div className="mt-8 pt-6 flex items-center justify-between border-t border-white/[0.06]">
@@ -198,11 +198,12 @@ export default function Booking() {
   );
 }
 
-function DateTimeStep({ date, time, onDate, onTime, barberId }) {
+function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [bookedSlots, setBookedSlots] = useState([]);
+  const [partialBlocks, setPartialBlocks] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isDayBlocked, setIsDayBlocked] = useState(false);
 
@@ -222,7 +223,7 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
       out.push({ d, dt, disabled: isPast || isClosed, today: dt.toDateString() === today.toDateString() });
     }
     return out;
-  }, [month]);
+  }, [month, dayNames, today]);
 
   useEffect(() => {
     if (!date || !barberId) return;
@@ -237,9 +238,9 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
       
       setIsDayBlocked(!!res?.isBlocked);
       
-      // Las horas de la base de datos vienen como "14:00:00", mapear a "14:00"
-      const formattedSlots = (res?.booked || []).map(t => t.slice(0, 5));
-      setBookedSlots(formattedSlots);
+      // Guardamos los objetos completos de citas y bloqueos parciales
+      setBookedSlots(res?.booked || []);
+      setPartialBlocks(res?.partialBlocks || []);
       setLoadingSlots(false);
     }
     fetchSlots();
@@ -259,21 +260,66 @@ function DateTimeStep({ date, time, onDate, onTime, barberId }) {
     const isToday = date.toDateString() === (new Date()).toDateString();
     const now = new Date();
 
+    const duration = service?.duration_minutes || 45;
+    const capacity = service?.max_capacity || 1;
+    // Saltamos cada 30 minutos por defecto, o la duración del servicio si es menor
+    const stepMinutes = 30;
+    const shopCloseMins = closeH * 60 + closeM;
+
     let h = openH, m = openM;
     while (h < closeH || (h === closeH && m < closeM)) {
       const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       
       let isPastSlot = false;
       if (isToday) {
-        if (h <= now.getHours()) {
+        if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
           isPastSlot = true;
         }
       }
 
-      if (!bookedSlots.includes(timeStr) && !isPastSlot) {
-        slots.push(timeStr);
+      if (!isPastSlot) {
+        const slotStartMins = h * 60 + m;
+        const slotEndMins = slotStartMins + duration;
+
+        // No permitir que el turno termine después de que la tienda cierre
+        if (slotEndMins <= shopCloseMins) {
+          // Calcular si hay solapamiento con citas existentes
+          let overlappingCount = 0;
+          for (const appt of bookedSlots) {
+            if (!appt.appointment_time || !appt.end_time) continue;
+            
+            const [startH, startM] = appt.appointment_time.split(':').map(Number);
+            const [endH, endM] = appt.end_time.split(':').map(Number);
+            const apptStartMins = startH * 60 + startM;
+            const apptEndMins = endH * 60 + endM;
+
+            // Verifica solapamiento (tiempo superpuesto)
+            if (Math.max(slotStartMins, apptStartMins) < Math.min(slotEndMins, apptEndMins)) {
+              overlappingCount++;
+            }
+          }
+
+          // Calcular si choca con algún bloqueo parcial (ej. hora de almuerzo)
+          let hitsBlock = false;
+          for (const block of partialBlocks) {
+            if (!block.start_time || !block.end_time) continue;
+            const [startH, startM] = block.start_time.split(':').map(Number);
+            const [endH, endM] = block.end_time.split(':').map(Number);
+            const blockStartMins = startH * 60 + startM;
+            const blockEndMins = endH * 60 + endM;
+
+            if (Math.max(slotStartMins, blockStartMins) < Math.min(slotEndMins, blockEndMins)) {
+              hitsBlock = true;
+              break;
+            }
+          }
+
+          if (overlappingCount < capacity && !hitsBlock) {
+            slots.push(timeStr);
+          }
+        }
       }
-      m += 60;
+      m += stepMinutes;
       if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
     }
     return slots;

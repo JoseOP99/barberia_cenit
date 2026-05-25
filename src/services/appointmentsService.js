@@ -65,10 +65,10 @@ export const appointmentsService = {
     try {
       if (!date) throw new Error('Date es requerido');
 
-      // 1. Obtener citas agendadas
+      // 1. Obtener citas agendadas con hora de inicio y fin
       let query = supabase
         .from('appointments')
-        .select('appointment_time')
+        .select('appointment_time, end_time, service_id')
         .eq('appointment_date', date)
         .in('status', ['pending', 'confirmed']);
 
@@ -94,11 +94,15 @@ export const appointmentsService = {
       const { data: blocksData, error: blocksErr } = await blocksQuery;
       if (blocksErr) handleError(blocksErr, 'getAvailableSlots (blocks)');
 
-      // Si hay al menos un bloqueo que cubre esta fecha, devolvemos isBlocked: true
-      const isBlocked = blocksData && blocksData.length > 0;
+      // Diferenciar entre bloqueos de día completo y bloqueos parciales (ej. almuerzo)
+      const fullDayBlocks = (blocksData || []).filter(b => !b.start_time || !b.end_time);
+      const partialBlocks = (blocksData || []).filter(b => b.start_time && b.end_time);
 
-      const bookedTimes = (data || []).map(a => a.appointment_time);
-      return { booked: bookedTimes, date, isBlocked };
+      const isBlocked = fullDayBlocks.length > 0;
+
+      // Devolver los objetos completos para poder calcular solapamientos
+      const bookedTimes = data || [];
+      return { booked: bookedTimes, date, isBlocked, partialBlocks };
     } catch (err) {
       handleError(err, 'getAvailableSlots');
     }

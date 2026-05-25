@@ -90,6 +90,7 @@ export const servicesService = {
           description: serviceData.description || '',
           price: serviceData.price,
           duration_minutes: serviceData.duration_minutes,
+          max_capacity: serviceData.max_capacity || 1,
           category: serviceData.category || 'general',
           available: serviceData.available !== false,
           display_order: serviceData.display_order || 999,

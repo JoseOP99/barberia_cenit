@@ -4,7 +4,7 @@ import { formatCOP } from '../../data/cenitData';
 import servicesService from '../../services/servicesService';
 
 const INITIAL_FORM = {
-  name: '', description: '', price: '', duration_minutes: 45, category: 'corte', available: true
+  name: '', description: '', price: '', duration_minutes: 45, max_capacity: 1, category: 'corte', available: true
 };
 
 export default function ServicesManager() {
@@ -28,7 +28,7 @@ export default function ServicesManager() {
     setEditingId(s.id);
     setForm({
       name: s.name, description: s.description || '', price: s.price, 
-      duration_minutes: s.duration_minutes, category: s.category || 'corte', available: s.available
+      duration_minutes: s.duration_minutes, max_capacity: s.max_capacity || 1, category: s.category || 'corte', available: s.available
     });
     setShowForm(true);
   };
@@ -53,6 +53,7 @@ export default function ServicesManager() {
         ...form,
         price: Number(form.price),
         duration_minutes: Number(form.duration_minutes),
+        max_capacity: Number(form.max_capacity)
       };
       if (editingId) {
         await servicesService.updateService(editingId, payload);
@@ -99,6 +100,7 @@ export default function ServicesManager() {
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Servicio</th>
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Precio</th>
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Duración</th>
+                  <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Capacidad</th>
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal">Estado</th>
                   <th className="px-5 py-3 text-[10px] tracking-widest uppercase text-[#6A655C] font-normal text-right">Acciones</th>
                 </tr>
@@ -112,6 +114,7 @@ export default function ServicesManager() {
                     </td>
                     <td className="px-5 py-3.5 font-mono text-sm text-[#E8C77E]">{formatCOP(s.price)}</td>
                     <td className="px-5 py-3.5 font-mono text-sm text-[#F5F1E8]">{s.duration_minutes} min</td>
+                    <td className="px-5 py-3.5 font-mono text-sm text-[#F5F1E8]">{s.max_capacity || 1} pers.</td>
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex px-2.5 py-1 text-[10px] tracking-wider uppercase rounded-full border ${
                         s.available ? 'text-[#7FA86A] bg-[#7FA86A]/10 border-[#7FA86A]/30' : 'text-[#6A655C] bg-white/[0.03] border-white/[0.06]'
@@ -155,7 +158,7 @@ export default function ServicesManager() {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Precio *</label>
                 <input required type="number" min="0" value={form.price} onChange={e => setForm({...form, price: e.target.value})}
@@ -164,6 +167,11 @@ export default function ServicesManager() {
               <div>
                 <label className="block text-xs text-[#9A9489] mb-1">Duración (min) *</label>
                 <input required type="number" min="5" step="5" value={form.duration_minutes} onChange={e => setForm({...form, duration_minutes: e.target.value})}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-[#9A9489] mb-1" title="Cuántas personas pueden agendar este servicio en el mismo horario">Capacidad Máxima *</label>
+                <input required type="number" min="1" step="1" value={form.max_capacity} onChange={e => setForm({...form, max_capacity: e.target.value})}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A86A] outline-none" />
               </div>
             </div>
