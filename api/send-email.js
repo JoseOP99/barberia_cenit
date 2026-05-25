@@ -12,23 +12,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Validar Autenticación (JWT)
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
-    }
-    const token = authHeader.split(' ')[1];
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-    }
-
-    // 2. Procesar Orden (No aceptar HTML directo)
+    // 1. Procesar Orden (No aceptar HTML directo)
     const { to, bcc, type, payload } = req.body;
 
     if ((!to && !bcc) || !type || !payload) {
       return res.status(400).json({ error: 'Missing required fields (to/bcc, type, payload)' });
+    }
+
+    // 2. Validar Autenticación (JWT) para correos privados
+    const isPublicEmail = ['WELCOME_CLIENT', 'NEW_REGISTER_ADMIN'].includes(type);
+    
+    if (!isPublicEmail) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid token for private email' });
+      }
+      const token = authHeader.split(' ')[1];
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+      }
     }
 
     // 3. Construir el contenido internamente de forma segura

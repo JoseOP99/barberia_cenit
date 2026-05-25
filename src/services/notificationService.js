@@ -7,18 +7,26 @@ export const notificationService = {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      if (!token) {
-        console.warn('notificationService: No active session. Email not sent.');
+      // Correos públicos que no requieren estar logueado (ej. registro)
+      const isPublicEmail = ['WELCOME_CLIENT', 'NEW_REGISTER_ADMIN'].includes(type);
+
+      if (!token && !isPublicEmail) {
+        console.warn(`notificationService: No active session. Email ${type} not sent.`);
         return null; // Opcional: lanzar error si es estricto
+      }
+
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
       // 2. Enviar petición segura a nuestra API
       const res = await fetch('/api/send-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify({ to, bcc, type, payload })
       });
 
