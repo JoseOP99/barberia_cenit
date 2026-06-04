@@ -270,12 +270,15 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
     const shopCloseMins = closeH * 60 + closeM;
 
     let h = openH, m = openM;
-    while (h < closeH || (h === closeH && m < closeM)) {
+    while (h < closeH || (h === closeH && m <= closeM)) {
       const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       
       let isPastSlot = false;
       if (isToday) {
-        if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const slotStartMins = h * 60 + m;
+        // Permite agendar el bloque actual (hasta que termina el bloque, ej. 30 mins)
+        if (slotStartMins + stepMinutes <= nowMins) {
           isPastSlot = true;
         }
       }
@@ -284,8 +287,8 @@ function DateTimeStep({ date, time, onDate, onTime, barberId, service }) {
         const slotStartMins = h * 60 + m;
         const slotEndMins = slotStartMins + duration;
 
-        // No permitir que el turno termine después de que la tienda cierre
-        if (slotEndMins <= shopCloseMins) {
+        // Permitir que el turno empiece hasta la hora de cierre (sin importar si termina después)
+        if (slotStartMins <= shopCloseMins) {
           // Calcular si hay solapamiento con citas existentes
           let overlappingCount = 0;
           let overlappingClients = [];
